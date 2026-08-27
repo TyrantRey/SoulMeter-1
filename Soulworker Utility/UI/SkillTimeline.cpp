@@ -5,6 +5,7 @@
 #include ".\Combat Meter\CombatMeter.h"
 #include ".\Damage Meter\Damage Meter.h"
 #include ".\Damage Meter\MySQLite.h"
+#include ".\UI\Option.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -17,15 +18,24 @@ namespace {
 	constexpr float kChartMaxShare = 0.6f;   // of the tab's remaining height
 	constexpr double kBarHalfHeight = 0.38;  // in row units
 	constexpr double kMinBarSeconds = 0.05;  // so a zero-length cast still shows
+	constexpr float kBarLabelPadPx = 8.0f;
 
-	// Raw entry copied out of the combat log while its lock is held; names are
-	// resolved afterwards so no other lock is taken under the combat lock.
-	struct RawEntry {
+	// Raw entries copied out of the combat log while its lock is held; names
+	// are resolved afterwards so no other lock is taken under the combat lock.
+	struct RawCast {
 		uint32_t _id;
 		bool _isPlayer;
 		uint32_t _skillId;
 		double _elapsedMs;   // raid-timer time, 0 when unknown
 		uint64_t _timestamp; // wall clock, ms
+	};
+
+	struct RawHit {
+		uint32_t _id;
+		bool _isPlayer;
+		uint64_t _timestamp;
+		double _damage;
+		bool _crit;
 	};
 
 	std::string CsvQuote(const std::string& s)
@@ -43,6 +53,11 @@ namespace {
 	uint64_t RowKey(size_t lane, uint32_t skillId)
 	{
 		return (static_cast<uint64_t>(lane) << 32) | skillId;
+	}
+
+	uint64_t LaneKey(uint32_t id, bool isPlayer)
+	{
+		return (static_cast<uint64_t>(isPlayer) << 32) | id;
 	}
 }
 
@@ -96,7 +111,8 @@ void SkillTimeline::RebuildIfNeeded()
 
 void SkillTimeline::Rebuild()
 {
-	std::vector<RawEntry> raws;
+	std::vector<RawCast> casts;
+	std::vector<RawHit> hits;
 
 	CombatInterface* ci = COMBATMETER.Get();
 	if (ci == nullptr) {
@@ -112,44 +128,63 @@ void SkillTimeline::Rebuild()
 
 			for (auto log = pCombat->begin(); log != pCombat->end(); log++) {
 				CombatLog* pLog = log->second;
-				if (pLog->_type != CombatLogType::USED_SKILL)
-					continue;
-
-				RawEntry raw;
-				raw._id = pCombat->GetID();
-				raw._isPlayer = isPlayer;
-				raw._skillId = static_cast<uint32_t>(pLog->_val1);
-				raw._elapsedMs = pLog->_val2;
-				raw._timestamp = log->first;
-				raws.push_back(raw);
+				switch (pLog->_type) {
+				case CombatLogType::USED_SKILL:
+				{
+					RawCast raw;
+					raw._id = pCombat->GetID();
+					raw._isPlayer = isPlayer;
+					raw._skillId = static_cast<uint32_t>(pLog->_val1);
+					raw._elapsedMs = pLog->_val2;
+					raw._timestamp = log->first;
+					casts.push_back(raw);
+					break;
+				}
+				case CombatLogType::GIVE_DAMAGE_NORMAL:
+				case CombatLogType::GIVE_DAMAGE_CRIT:
+				case CombatLogType::GIVE_DAMAGE_MISS:
+				{
+					RawHit hit;
+					hit._id = pCombat->GetID();
+					hit._isPlayer = isPlayer;
+					hit._timestamp = log->first;
+					hit._damage = pLog->_val1;
+					hit._crit = pLog->_type == CombatLogType::GIVE_DAMAGE_CRIT;
+					hits.push_back(hit);
+					break;
+				}
+				default:
+					break;
+				}
 			}
 		}
 		COMBATMETER.FreeLock();
 	}
 
-	// Time base. Entries stamped with the raid timer are exact; anything else
-	// (older histories, casts before the timer started) is placed by wall clock
-	// relative to the same origin, which puts pre-pull casts at negative times.
+	// Time base. Casts stamped with the raid timer are exact; anything else
+	// (older histories, casts before the timer started, and every damage hit)
+	// is placed by wall clock relative to the same origin, which puts pre-pull
+	// casts at negative times.
 	double originTs = 0;
 	bool haveOrigin = false;
 	uint64_t minTs = UINT64_MAX;
-	for (const RawEntry& raw : raws) {
+	for (const RawCast& raw : casts) {
 		if (!haveOrigin && raw._elapsedMs > 0) {
 			originTs = static_cast<double>(raw._timestamp) - raw._elapsedMs;
 			haveOrigin = true;
 		}
 		minTs = (raw._timestamp < minTs) ? raw._timestamp : minTs;
 	}
-	if (!haveOrigin && !raws.empty())
+	if (!haveOrigin && !casts.empty())
 		originTs = static_cast<double>(minTs);
 
 	struct Timed {
-		RawEntry _raw;
+		RawCast _raw;
 		double _seconds;
 	};
 	std::vector<Timed> timed;
-	timed.reserve(raws.size());
-	for (const RawEntry& raw : raws) {
+	timed.reserve(casts.size());
+	for (const RawCast& raw : casts) {
 		double seconds = (raw._elapsedMs > 0)
 			? raw._elapsedMs / 1000.0
 			: (static_cast<double>(raw._timestamp) - originTs) / 1000.0;
@@ -162,14 +197,13 @@ void SkillTimeline::Rebuild()
 	// Lanes: players in order of first cast, then bosses.
 	std::vector<Lane> lanes;
 	std::unordered_map<uint64_t, size_t> laneIndex;
-	auto laneKey = [](uint32_t id, bool isPlayer) { return (static_cast<uint64_t>(isPlayer) << 32) | id; };
 
 	for (int pass = 0; pass < 2; pass++) {
 		bool wantPlayer = (pass == 0);
 		for (const Timed& t : timed) {
 			if (t._raw._isPlayer != wantPlayer)
 				continue;
-			uint64_t key = laneKey(t._raw._id, t._raw._isPlayer);
+			uint64_t key = LaneKey(t._raw._id, t._raw._isPlayer);
 			if (laneIndex.find(key) != laneIndex.end())
 				continue;
 
@@ -197,7 +231,7 @@ void SkillTimeline::Rebuild()
 	entries.reserve(timed.size());
 	std::vector<int> lastOfLane(lanes.size(), -1);
 	for (const Timed& t : timed) {
-		size_t li = laneIndex[laneKey(t._raw._id, t._raw._isPlayer)];
+		size_t li = laneIndex[LaneKey(t._raw._id, t._raw._isPlayer)];
 
 		Entry e;
 		e._lane = li;
@@ -212,6 +246,27 @@ void SkillTimeline::Rebuild()
 		lastOfLane[li] = static_cast<int>(entries.size());
 
 		entries.push_back(e);
+	}
+
+	// Damage per lane, time-sorted with prefix sums. Hits from entities that
+	// never cast anything have no lane and are dropped.
+	std::stable_sort(hits.begin(), hits.end(), [](const RawHit& a, const RawHit& b) {
+		return a._timestamp < b._timestamp;
+	});
+	for (Lane& lane : lanes) {
+		lane._dmgPrefix.push_back(0);
+		lane._hitPrefix.push_back(0);
+		lane._critPrefix.push_back(0);
+	}
+	for (const RawHit& hit : hits) {
+		auto found = laneIndex.find(LaneKey(hit._id, hit._isPlayer));
+		if (found == laneIndex.end())
+			continue;
+		Lane& lane = lanes[found->second];
+		lane._dmgTimes.push_back((static_cast<double>(hit._timestamp) - originTs) / 1000.0);
+		lane._dmgPrefix.push_back(lane._dmgPrefix.back() + hit._damage);
+		lane._hitPrefix.push_back(lane._hitPrefix.back() + 1);
+		lane._critPrefix.push_back(lane._critPrefix.back() + (hit._crit ? 1 : 0));
 	}
 
 	_lanes.swap(lanes);
@@ -242,6 +297,25 @@ double SkillTimeline::EndOf(const Entry& e) const
 	return end;
 }
 
+// Damage landed in [cast, end of bar).
+SkillTimeline::DamageWindow SkillTimeline::DamageIn(const Entry& e) const
+{
+	DamageWindow w;
+	const Lane& lane = _lanes[e._lane];
+	if (lane._dmgTimes.empty())
+		return w;
+
+	auto lo = std::lower_bound(lane._dmgTimes.begin(), lane._dmgTimes.end(), e._seconds);
+	auto hi = std::lower_bound(lane._dmgTimes.begin(), lane._dmgTimes.end(), EndOf(e));
+	size_t a = static_cast<size_t>(lo - lane._dmgTimes.begin());
+	size_t b = static_cast<size_t>(hi - lane._dmgTimes.begin());
+
+	w._damage = lane._dmgPrefix[b] - lane._dmgPrefix[a];
+	w._hits = lane._hitPrefix[b] - lane._hitPrefix[a];
+	w._crits = lane._critPrefix[b] - lane._critPrefix[a];
+	return w;
+}
+
 void SkillTimeline::FormatTime(double seconds, char* out, size_t len) const
 {
 	bool negative = seconds < 0;
@@ -251,6 +325,55 @@ void SkillTimeline::FormatTime(double seconds, char* out, size_t len) const
 	int secs = (totalMs / 1000) % 60;
 	int ms = totalMs % 1000;
 	sprintf_s(out, len, "%s%02d:%02d.%03d", negative ? "-" : "", minutes, secs, ms);
+}
+
+// Same presentation as the damage table: the 1K / 10K / 1M option scales the
+// number and appends its unit, everything else gets thousands separators.
+void SkillTimeline::FormatDamage(double damage, char* out, size_t len) const
+{
+	double value = damage;
+	const char* unit = "";
+	if (UIOPTION.is1K()) {
+		value /= 1000.0;
+		unit = LANGMANAGER.GetText("STR_DISPLAY_UNIT_1K").data();
+	}
+	else if (UIOPTION.is1M()) {
+		value /= 1000000.0;
+		unit = LANGMANAGER.GetText("STR_DISPLAY_UNIT_1M").data();
+	}
+	else if (UIOPTION.is10K()) {
+		value /= 10000.0;
+		unit = LANGMANAGER.GetText("STR_DISPLAY_UNIT_10K").data();
+	}
+
+	char comma[128] = { 0 };
+	if (UIOPTION.is1M()) {
+		TextCommmaIncludeDecimal(value, sizeof(comma), comma);
+	}
+	else {
+		char plain[64] = { 0 };
+		sprintf_s(plain, "%.0f", value);
+		TextCommma(plain, comma);
+	}
+	sprintf_s(out, len, "%s%s", comma, unit);
+}
+
+void SkillTimeline::FormatDamageShort(double damage, char* out, size_t len) const
+{
+	if (UIOPTION.is1K())
+		sprintf_s(out, len, "%.0f%s", damage / 1000.0, LANGMANAGER.GetText("STR_DISPLAY_UNIT_1K").data());
+	else if (UIOPTION.is1M())
+		sprintf_s(out, len, "%.1f%s", damage / 1000000.0, LANGMANAGER.GetText("STR_DISPLAY_UNIT_1M").data());
+	else if (UIOPTION.is10K())
+		sprintf_s(out, len, "%.0f%s", damage / 10000.0, LANGMANAGER.GetText("STR_DISPLAY_UNIT_10K").data());
+	else if (damage >= 1000000000.0)
+		sprintf_s(out, len, "%.2fB", damage / 1000000000.0);
+	else if (damage >= 1000000.0)
+		sprintf_s(out, len, "%.1fM", damage / 1000000.0);
+	else if (damage >= 1000.0)
+		sprintf_s(out, len, "%.0fK", damage / 1000.0);
+	else
+		sprintf_s(out, len, "%.0f", damage);
 }
 
 void SkillTimeline::BuildRows(std::vector<Row>& rows, std::vector<int>& rowOfEntry) const
@@ -361,10 +484,19 @@ void SkillTimeline::DrawControls()
 		CopyToClipboard();
 
 	size_t shown = 0;
-	for (const Entry& e : _entries)
-		shown += PassesFilter(e) ? 1 : 0;
+	double shownDamage = 0;
+	for (const Entry& e : _entries) {
+		if (!PassesFilter(e))
+			continue;
+		shown++;
+		shownDamage += DamageIn(e)._damage;
+	}
+	char damageText[128] = { 0 };
+	FormatDamage(shownDamage, damageText, sizeof(damageText));
 	ImGui::SameLine();
 	ImGui::TextDisabled(LANGMANAGER.GetText("STR_PLOTWINDOW_SKILLTIMELINE_COUNT").data(), static_cast<int>(shown));
+	ImGui::SameLine();
+	ImGui::TextDisabled("| %s %s", LANGMANAGER.GetText("STR_PLOTWINDOW_SKILLTIMELINE_DAMAGE").data(), damageText);
 
 	if (!_status.empty())
 		ImGui::TextDisabled("%s", _status.c_str());
@@ -428,6 +560,7 @@ void SkillTimeline::DrawGantt()
 			ImVec2 mouse = ImGui::GetMousePos();
 			bool hovered = ImPlot::IsPlotHovered();
 			int hoveredEntry = -1;
+			char barText[32] = { 0 };
 
 			ImPlot::PushPlotClipRect();
 			for (size_t i = 0; i < _entries.size(); i++) {
@@ -454,19 +587,38 @@ void SkillTimeline::DrawGantt()
 				ImU32 edge = ImGui::GetColorU32(ImVec4(color.x * 0.6f, color.y * 0.6f, color.z * 0.6f, 1.0f));
 				draw->AddRectFilled(pmin, pmax, fill, 2.0f);
 				draw->AddRect(pmin, pmax, edge, 2.0f);
+
+				// Damage label inside the bar when there is room for it.
+				DamageWindow w = DamageIn(e);
+				if (w._damage > 0) {
+					FormatDamageShort(w._damage, barText, sizeof(barText));
+					ImVec2 textSize = ImGui::CalcTextSize(barText);
+					if (textSize.x + kBarLabelPadPx <= pmax.x - pmin.x && textSize.y <= pmax.y - pmin.y) {
+						float luma = 0.299f * color.x + 0.587f * color.y + 0.114f * color.z;
+						ImU32 textColor = luma > 0.6f ? IM_COL32(0, 0, 0, 255) : IM_COL32(255, 255, 255, 255);
+						ImVec2 textPos(pmin.x + (pmax.x - pmin.x - textSize.x) * 0.5f,
+							pmin.y + (pmax.y - pmin.y - textSize.y) * 0.5f);
+						draw->AddText(textPos, textColor, barText);
+					}
+				}
 			}
 			ImPlot::PopPlotClipRect();
 
 			if (hoveredEntry >= 0) {
 				const Entry& e = _entries[hoveredEntry];
+				DamageWindow w = DamageIn(e);
 				char startText[32] = { 0 };
 				char endText[32] = { 0 };
+				char damageText[128] = { 0 };
 				FormatTime(e._seconds, startText, sizeof(startText));
 				FormatTime(EndOf(e), endText, sizeof(endText));
+				FormatDamage(w._damage, damageText, sizeof(damageText));
 				ImGui::BeginTooltip();
 				ImGui::Text("%s", _lanes[e._lane]._name.c_str());
 				ImGui::Text("%s", e._skillName.c_str());
 				ImGui::TextDisabled("%s - %s (%.2f s)", startText, endText, EndOf(e) - e._seconds);
+				ImGui::Text("%s %s", LANGMANAGER.GetText("STR_PLOTWINDOW_SKILLTIMELINE_DAMAGE").data(), damageText);
+				ImGui::TextDisabled(LANGMANAGER.GetText("STR_PLOTWINDOW_SKILLTIMELINE_HITS").data(), w._hits, w._crits);
 				ImGui::EndTooltip();
 			}
 
@@ -486,7 +638,7 @@ void SkillTimeline::DrawList()
 	}
 
 	ImGuiTableFlags flags = ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable;
-	if (!ImGui::BeginTable("SkillTimelineTable", 5, flags, ImVec2(0, 0)))
+	if (!ImGui::BeginTable("SkillTimelineTable", 7, flags, ImVec2(0, 0)))
 		return;
 
 	ImGui::TableSetupScrollFreeze(0, 1);
@@ -495,15 +647,20 @@ void SkillTimeline::DrawList()
 	ImGui::TableSetupColumn(LANGMANAGER.GetText("STR_PLOTWINDOW_SKILLTIMELINE_DURATION").data(), ImGuiTableColumnFlags_WidthFixed, 80.0f);
 	ImGui::TableSetupColumn(LANGMANAGER.GetText("STR_PLOTWINDOW_SKILLTIMELINE_PLAYER").data(), ImGuiTableColumnFlags_WidthFixed, 140.0f);
 	ImGui::TableSetupColumn(LANGMANAGER.GetText("STR_PLOTWINDOW_SKILLTIMELINE_SKILL").data(), ImGuiTableColumnFlags_WidthStretch);
+	ImGui::TableSetupColumn(LANGMANAGER.GetText("STR_PLOTWINDOW_SKILLTIMELINE_DAMAGE").data(), ImGuiTableColumnFlags_WidthFixed, 120.0f);
+	ImGui::TableSetupColumn(LANGMANAGER.GetText("STR_TABLE_TOTAL_HIT").data(), ImGuiTableColumnFlags_WidthFixed, 70.0f);
 	ImGui::TableHeadersRow();
 
 	char timeText[32] = { 0 };
+	char damageText[128] = { 0 };
 	ImGuiListClipper clipper;
 	clipper.Begin(static_cast<int>(rows.size()));
 	while (clipper.Step()) {
 		for (int r = clipper.DisplayStart; r < clipper.DisplayEnd; r++) {
 			const Entry& e = _entries[rows[r]];
+			DamageWindow w = DamageIn(e);
 			FormatTime(e._seconds, timeText, sizeof(timeText));
+			FormatDamage(w._damage, damageText, sizeof(damageText));
 
 			ImGui::TableNextRow();
 			ImGui::TableNextColumn();
@@ -516,6 +673,10 @@ void SkillTimeline::DrawList()
 			ImGui::Text("%s", _lanes[e._lane]._name.c_str());
 			ImGui::TableNextColumn();
 			ImGui::Text("%s", e._skillName.c_str());
+			ImGui::TableNextColumn();
+			ImGui::Text("%s", damageText);
+			ImGui::TableNextColumn();
+			ImGui::Text("%d (%d)", w._hits, w._crits);
 		}
 	}
 
@@ -540,19 +701,22 @@ bool SkillTimeline::ExportCsv()
 	}
 
 	file << "\xEF\xBB\xBF";
-	file << "start_sec,end_sec,duration_sec,time,player,skill_id,skill\r\n";
+	file << "start_sec,end_sec,duration_sec,time,player,skill_id,skill,damage,hits,crits\r\n";
 
 	char timeText[32] = { 0 };
 	char numbers[96] = { 0 };
+	char tail[96] = { 0 };
 	for (const Entry& e : _entries) {
 		if (!PassesFilter(e))
 			continue;
 		double end = EndOf(e);
+		DamageWindow w = DamageIn(e);
 		FormatTime(e._seconds, timeText, sizeof(timeText));
 		sprintf_s(numbers, "%.3f,%.3f,%.3f", e._seconds, end, end - e._seconds);
+		sprintf_s(tail, "%.0f,%d,%d", w._damage, w._hits, w._crits);
 		file << numbers << ',' << timeText << ','
 			<< CsvQuote(_lanes[e._lane]._name) << ',' << e._skillId << ','
-			<< CsvQuote(e._skillName) << "\r\n";
+			<< CsvQuote(e._skillName) << ',' << tail << "\r\n";
 	}
 	file.close();
 
@@ -567,11 +731,14 @@ void SkillTimeline::CopyToClipboard()
 	std::string text;
 	char timeText[32] = { 0 };
 	char duration[32] = { 0 };
+	char damageText[128] = { 0 };
 	for (const Entry& e : _entries) {
 		if (!PassesFilter(e))
 			continue;
+		DamageWindow w = DamageIn(e);
 		FormatTime(e._seconds, timeText, sizeof(timeText));
 		sprintf_s(duration, "%.2fs", EndOf(e) - e._seconds);
+		FormatDamage(w._damage, damageText, sizeof(damageText));
 		text += "[";
 		text += timeText;
 		text += "] ";
@@ -580,7 +747,9 @@ void SkillTimeline::CopyToClipboard()
 		text += e._skillName;
 		text += " (";
 		text += duration;
-		text += ")\n";
+		text += ") ";
+		text += damageText;
+		text += "\n";
 	}
 	ImGui::SetClipboardText(text.c_str());
 }

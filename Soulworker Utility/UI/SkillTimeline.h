@@ -7,14 +7,17 @@
 // (player, skill), x = seconds on the raid timer. A bar runs from the cast
 // until that player's next cast, capped by an adjustable maximum, so the
 // chart reads as the rotation - what was pressed, in what order, with the
-// gaps. Below the chart is a filterable chronological list; the same rows
-// can be exported to CSV or copied to the clipboard.
+// gaps. Each bar also carries the damage the player dealt inside its window,
+// summed from the GIVE_DAMAGE entries of the same log. Below the chart is a
+// filterable chronological list; the same rows can be exported to CSV or
+// copied to the clipboard.
 //
 // Data source: USED_SKILL entries carry the skill id in _val1 and, since this
 // feature, the raid-timer elapsed time in milliseconds in _val2. Entries
 // recorded without it (older histories, casts before the timer started) are
 // placed by wall clock relative to the same origin, so the tab works for live
-// runs and for every saved history.
+// runs and for every saved history. Damage entries are placed by wall clock
+// against that origin too.
 
 #define SKILLTIMELINE SkillTimeline::getInstance()
 
@@ -24,6 +27,13 @@ private:
 		uint32_t _id;
 		bool _isPlayer;
 		std::string _name;
+
+		// Damage dealt by this lane, sorted by time, with prefix sums so any
+		// window is a pair of binary searches.
+		std::vector<double> _dmgTimes;
+		std::vector<double> _dmgPrefix;   // size + 1
+		std::vector<int> _hitPrefix;      // size + 1
+		std::vector<int> _critPrefix;     // size + 1
 	};
 
 	struct Entry {
@@ -38,6 +48,12 @@ private:
 		size_t _lane;
 		uint32_t _skillId;
 		std::string _label;
+	};
+
+	struct DamageWindow {
+		double _damage = 0;
+		int _hits = 0;
+		int _crits = 0;
 	};
 
 	std::vector<Lane> _lanes;
@@ -60,7 +76,11 @@ private:
 
 	bool PassesFilter(const Entry& e) const;
 	double EndOf(const Entry& e) const;
+	DamageWindow DamageIn(const Entry& e) const;
+
 	void FormatTime(double seconds, char* out, size_t len) const;
+	void FormatDamage(double damage, char* out, size_t len) const;       // table style: commas + unit option
+	void FormatDamageShort(double damage, char* out, size_t len) const;  // bar label: compact
 
 	// Rows for the current filter, grouped by lane in first-use order;
 	// rowOfEntry maps every entry index to its row (or -1 when filtered out).
