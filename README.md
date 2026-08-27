@@ -30,6 +30,7 @@ SoulMeter reads the game's network traffic and turns it into a live picture of y
 | **Buff tracking** | Uptime for armour break, attack speed, boss damage and more |
 | **DPS graphs** | Damage-over-time plots per player, powered by ImPlot |
 | **Combat log** | A recorded blow-by-blow of the encounter |
+| **Skill timeline** | Every skill cast plotted per player against the raid clock, with a filterable list and CSV export |
 | **History** | The last 50 runs are kept and can be reopened and compared |
 | **Ping** | Live latency, measured from the game's own heartbeat exchange |
 | **Faster loading** | Cuts cold game startup from ~95s to ~38s — see [Load-time optimisations](#load-time-optimisations) |

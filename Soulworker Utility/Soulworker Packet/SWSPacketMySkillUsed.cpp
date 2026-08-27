@@ -16,6 +16,7 @@ VOID SWSPacketMySkillUsed::Do() {
 	CombatLog* pCombatLog = new CombatLog;
 	pCombatLog->_type = CombatLogType::USED_SKILL;
 	pCombatLog->_val1 = skillUsed->_skillId;
+	pCombatLog->_val2 = static_cast<double>(DAMAGEMETER.GetTime());
 	COMBATMETER.Insert(skillUsed->_playerId, CombatType::PLAYER, pCombatLog);
 	return;
 }

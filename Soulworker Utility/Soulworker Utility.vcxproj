@@ -259,6 +259,7 @@
     <ClInclude Include="UI\Option.h" />
     <ClInclude Include="UI\PlayerTable.h" />
     <ClInclude Include="UI\PlotWindow.h" />
+    <ClInclude Include="UI\SkillTimeline.h" />
     <ClInclude Include="UI\SpecificInfomation.h" />
     <ClInclude Include="UI\UiWindow.h" />
     <ClInclude Include="UI\UtillWindow.h" />
@@ -346,6 +347,7 @@
     <ClCompile Include="UI\Option.cpp" />
     <ClCompile Include="UI\PlayerTable.cpp" />
     <ClCompile Include="UI\PlotWindow.cpp" />
+    <ClCompile Include="UI\SkillTimeline.cpp" />
     <ClCompile Include="UI\SpecificInfomation.cpp" />
     <ClCompile Include="UI\UiWindow.cpp" />
     <ClCompile Include="UI\UtillWindow.cpp" />

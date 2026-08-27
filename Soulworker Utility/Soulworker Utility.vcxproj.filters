@@ -261,6 +261,9 @@
     <ClInclude Include="UI\PlotWindow.h">
       <Filter>UI\Window</Filter>
     </ClInclude>
+    <ClInclude Include="UI\SkillTimeline.h">
+      <Filter>UI\Window</Filter>
+    </ClInclude>
     <ClInclude Include="Third Party\imgui\implot.h">
       <Filter>UI\ImGui</Filter>
     </ClInclude>
@@ -525,6 +528,9 @@
       <Filter>SWPacket\Packet\0x06 Combat</Filter>
     </ClCompile>
     <ClCompile Include="UI\PlotWindow.cpp">
+      <Filter>UI\Window</Filter>
+    </ClCompile>
+    <ClCompile Include="UI\SkillTimeline.cpp">
       <Filter>UI\Window</Filter>
     </ClCompile>
     <ClCompile Include="Third Party\imgui\implot.cpp">

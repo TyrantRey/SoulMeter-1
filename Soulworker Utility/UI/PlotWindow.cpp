@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "PlotWindow.h"
 #include "UtillWindow.h"
+#include "SkillTimeline.h"
 #include <vector>
 
 #include ".\Damage Meter\MySQLite.h"
@@ -180,6 +181,7 @@ void PlotWindow::Update()
 				UpdateJqPlotTab();
 				UpdateBossHpPlotTab();
 			}
+			SKILLTIMELINE.UpdateTab();
 			ImGui::EndTabBar();
 		}
 		ImGui::End();
@@ -475,6 +477,7 @@ void PlotWindow::End()
 void PlotWindow::Clear()
 {
 	_end = false;
+	SKILLTIMELINE.Clear();
 	_pi = nullptr;
 	_selectedBossHpComboID = -1;
 	_historyMode = false;
