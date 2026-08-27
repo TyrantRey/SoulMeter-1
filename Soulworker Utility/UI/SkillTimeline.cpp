@@ -11,8 +11,12 @@
 #include <fstream>
 
 namespace {
-	constexpr float kPlotHeight = 260.0f;
-	constexpr float kHoverRadiusPx = 8.0f;
+	constexpr float kRowPx = 22.0f;          // chart height per row
+	constexpr float kChartPaddingPx = 70.0f; // axis, labels, margins
+	constexpr float kChartMinPx = 220.0f;
+	constexpr float kChartMaxShare = 0.6f;   // of the tab's remaining height
+	constexpr double kBarHalfHeight = 0.38;  // in row units
+	constexpr double kMinBarSeconds = 0.05;  // so a zero-length cast still shows
 
 	// Raw entry copied out of the combat log while its lock is held; names are
 	// resolved afterwards so no other lock is taken under the combat lock.
@@ -34,6 +38,11 @@ namespace {
 		}
 		out += '"';
 		return out;
+	}
+
+	uint64_t RowKey(size_t lane, uint32_t skillId)
+	{
+		return (static_cast<uint64_t>(lane) << 32) | skillId;
 	}
 }
 
@@ -186,16 +195,22 @@ void SkillTimeline::Rebuild()
 
 	std::vector<Entry> entries;
 	entries.reserve(timed.size());
+	std::vector<int> lastOfLane(lanes.size(), -1);
 	for (const Timed& t : timed) {
 		size_t li = laneIndex[laneKey(t._raw._id, t._raw._isPlayer)];
-		lanes[li]._xs.push_back(t._seconds);
-		lanes[li]._ys.push_back(static_cast<double>(li));
 
 		Entry e;
 		e._lane = li;
 		e._skillId = t._raw._skillId;
 		e._seconds = t._seconds;
+		e._next = -1;
 		e._skillName = SkillName(t._raw._skillId);
+
+		// A cast ends the previous bar on the same lane.
+		if (lastOfLane[li] >= 0)
+			entries[lastOfLane[li]]._next = t._seconds;
+		lastOfLane[li] = static_cast<int>(entries.size());
+
 		entries.push_back(e);
 	}
 
@@ -218,6 +233,15 @@ bool SkillTimeline::PassesFilter(const Entry& e) const
 	return true;
 }
 
+double SkillTimeline::EndOf(const Entry& e) const
+{
+	double cap = e._seconds + static_cast<double>(_maxBarSeconds);
+	double end = (e._next < 0 || e._next > cap) ? cap : e._next;
+	if (end < e._seconds + kMinBarSeconds)
+		end = e._seconds + kMinBarSeconds;
+	return end;
+}
+
 void SkillTimeline::FormatTime(double seconds, char* out, size_t len) const
 {
 	bool negative = seconds < 0;
@@ -227,6 +251,48 @@ void SkillTimeline::FormatTime(double seconds, char* out, size_t len) const
 	int secs = (totalMs / 1000) % 60;
 	int ms = totalMs % 1000;
 	sprintf_s(out, len, "%s%02d:%02d.%03d", negative ? "-" : "", minutes, secs, ms);
+}
+
+void SkillTimeline::BuildRows(std::vector<Row>& rows, std::vector<int>& rowOfEntry) const
+{
+	rows.clear();
+	rowOfEntry.assign(_entries.size(), -1);
+
+	// First pass: rows in first-use order, keyed by (lane, skill).
+	std::unordered_map<uint64_t, int> index;
+	for (size_t i = 0; i < _entries.size(); i++) {
+		const Entry& e = _entries[i];
+		if (!PassesFilter(e))
+			continue;
+		uint64_t key = RowKey(e._lane, e._skillId);
+		auto found = index.find(key);
+		if (found == index.end()) {
+			Row row;
+			row._lane = e._lane;
+			row._skillId = e._skillId;
+			if (_selectedLane < 0)
+				row._label = _lanes[e._lane]._name + " | " + e._skillName;
+			else
+				row._label = e._skillName;
+			index[key] = static_cast<int>(rows.size());
+			rows.push_back(row);
+		}
+	}
+
+	// Group by lane, keeping first-use order inside each lane.
+	std::stable_sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) {
+		return a._lane < b._lane;
+	});
+	index.clear();
+	for (size_t r = 0; r < rows.size(); r++)
+		index[RowKey(rows[r]._lane, rows[r]._skillId)] = static_cast<int>(r);
+
+	for (size_t i = 0; i < _entries.size(); i++) {
+		const Entry& e = _entries[i];
+		if (!PassesFilter(e))
+			continue;
+		rowOfEntry[i] = index[RowKey(e._lane, e._skillId)];
+	}
 }
 
 void SkillTimeline::UpdateTab()
@@ -242,7 +308,7 @@ void SkillTimeline::UpdateTab()
 		ImGui::TextDisabled("%s", LANGMANAGER.GetText("STR_PLOTWINDOW_SKILLTIMELINE_EMPTY").data());
 	}
 	else {
-		DrawPlot();
+		DrawGantt();
 		DrawList();
 	}
 
@@ -283,6 +349,11 @@ void SkillTimeline::DrawControls()
 	ImGui::InputText(label, _search, IM_ARRAYSIZE(_search));
 
 	ImGui::SameLine();
+	sprintf_s(label, "%s###SkillTimelineMaxBar", LANGMANAGER.GetText("STR_PLOTWINDOW_SKILLTIMELINE_MAXBAR").data());
+	ImGui::SetNextItemWidth(160.0f);
+	ImGui::SliderFloat(label, &_maxBarSeconds, 0.5f, 15.0f, "%.1f s");
+
+	ImGui::SameLine();
 	if (ImGui::Button(LANGMANAGER.GetText("STR_PLOTWINDOW_SKILLTIMELINE_EXPORT").data()))
 		ExportCsv();
 	ImGui::SameLine();
@@ -299,87 +370,110 @@ void SkillTimeline::DrawControls()
 		ImGui::TextDisabled("%s", _status.c_str());
 }
 
-void SkillTimeline::DrawPlot()
+void SkillTimeline::DrawGantt()
 {
-	// Lanes that survive the boss/player filters, bottom to top.
-	std::vector<size_t> visible;
-	for (size_t i = 0; i < _lanes.size(); i++) {
-		if (!_showBoss && !_lanes[i]._isPlayer)
-			continue;
-		if (_selectedLane >= 0 && static_cast<int>(i) != _selectedLane)
-			continue;
-		visible.push_back(i);
-	}
-	if (visible.empty())
+	std::vector<Row> rows;
+	std::vector<int> rowOfEntry;
+	BuildRows(rows, rowOfEntry);
+	if (rows.empty())
 		return;
 
-	std::vector<double> tickValues(visible.size());
-	std::vector<const char*> tickLabels(visible.size());
-	std::vector<double> laneRow(_lanes.size(), -1.0);
-	for (size_t row = 0; row < visible.size(); row++) {
-		tickValues[row] = static_cast<double>(row);
-		tickLabels[row] = _lanes[visible[row]]._name.c_str();
-		laneRow[visible[row]] = static_cast<double>(row);
+	std::vector<double> tickValues(rows.size());
+	std::vector<const char*> tickLabels(rows.size());
+	for (size_t r = 0; r < rows.size(); r++) {
+		tickValues[r] = static_cast<double>(r);
+		tickLabels[r] = rows[r]._label.c_str();
 	}
 
-	ImPlot::SetNextPlotLimitsY(-0.5, static_cast<double>(visible.size()) - 0.5, ImGuiCond_Always);
-	ImPlot::SetNextPlotTicksY(tickValues.data(), static_cast<int>(tickValues.size()), tickLabels.data());
-
-	if (!ImPlot::BeginPlot("##SkillTimelinePlot",
-		LANGMANAGER.GetText("STR_PLOTWINDOW_TIME_SEC").data(), nullptr,
-		ImVec2(-1, kPlotHeight),
-		ImPlotFlags_AntiAliased | ImPlotFlags_NoMousePos,
-		ImPlotAxisFlags_AutoFit,
-		ImPlotAxisFlags_Lock | ImPlotAxisFlags_NoGridLines | ImPlotAxisFlags_Invert))
-		return;
-
-	// Series per lane; the search filter is applied per point.
-	std::vector<double> xs;
-	std::vector<double> ys;
-	char label[256] = { 0 };
-	for (size_t row = 0; row < visible.size(); row++) {
-		const Lane& lane = _lanes[visible[row]];
-		xs.clear();
-		ys.clear();
-		for (const Entry& e : _entries) {
-			if (e._lane != visible[row] || !PassesFilter(e))
-				continue;
-			xs.push_back(e._seconds);
-			ys.push_back(static_cast<double>(row));
-		}
-		sprintf_s(label, "%s###lane%u_%d", lane._name.c_str(), lane._id, lane._isPlayer ? 1 : 0);
-		ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 5.0f);
-		ImPlot::PlotScatter(label, xs.data(), ys.data(), static_cast<int>(xs.size()));
+	// Extents feed an invisible series so the x axis keeps auto-fitting.
+	double minX = DBL_MAX;
+	double maxX = -DBL_MAX;
+	for (size_t i = 0; i < _entries.size(); i++) {
+		if (rowOfEntry[i] < 0)
+			continue;
+		minX = (_entries[i]._seconds < minX) ? _entries[i]._seconds : minX;
+		double end = EndOf(_entries[i]);
+		maxX = (end > maxX) ? end : maxX;
 	}
+	if (minX > 0)
+		minX = 0;
+	double fitX[2] = { minX, maxX };
+	double fitY[2] = { 0.0, static_cast<double>(rows.size()) - 1.0 };
 
-	if (ImPlot::IsPlotHovered()) {
-		ImVec2 mouse = ImGui::GetMousePos();
-		const Entry* best = nullptr;
-		float bestDist = kHoverRadiusPx * kHoverRadiusPx;
-		for (const Entry& e : _entries) {
-			if (laneRow[e._lane] < 0 || !PassesFilter(e))
-				continue;
-			ImVec2 px = ImPlot::PlotToPixels(e._seconds, laneRow[e._lane]);
-			float dx = px.x - mouse.x;
-			float dy = px.y - mouse.y;
-			float d = dx * dx + dy * dy;
-			if (d < bestDist) {
-				bestDist = d;
-				best = &e;
+	// The chart grows with its rows and scrolls once it would crowd the list.
+	float wanted = static_cast<float>(rows.size()) * kRowPx + kChartPaddingPx;
+	if (wanted < kChartMinPx)
+		wanted = kChartMinPx;
+	float region = ImGui::GetContentRegionAvail().y * kChartMaxShare;
+	if (region < kChartMinPx)
+		region = kChartMinPx;
+	float childHeight = (wanted < region) ? wanted : region;
+
+	ImGui::BeginChild("SkillTimelineGantt", ImVec2(0, childHeight), false);
+	{
+		ImPlot::SetNextPlotLimitsY(-0.5, static_cast<double>(rows.size()) - 0.5, ImGuiCond_Always);
+		ImPlot::SetNextPlotTicksY(tickValues.data(), static_cast<int>(tickValues.size()), tickLabels.data());
+
+		if (ImPlot::BeginPlot("##SkillTimelineGantt",
+			LANGMANAGER.GetText("STR_PLOTWINDOW_TIME_SEC").data(), nullptr,
+			ImVec2(-1, wanted),
+			ImPlotFlags_NoLegend | ImPlotFlags_NoMousePos | ImPlotFlags_NoChild,
+			ImPlotAxisFlags_AutoFit,
+			ImPlotAxisFlags_Lock | ImPlotAxisFlags_NoGridLines | ImPlotAxisFlags_Invert))
+		{
+			ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 0.0f, ImVec4(0, 0, 0, 0), 0.0f, ImVec4(0, 0, 0, 0));
+			ImPlot::PlotScatter("##fit", fitX, fitY, 2);
+
+			ImDrawList* draw = ImPlot::GetPlotDrawList();
+			ImVec2 mouse = ImGui::GetMousePos();
+			bool hovered = ImPlot::IsPlotHovered();
+			int hoveredEntry = -1;
+
+			ImPlot::PushPlotClipRect();
+			for (size_t i = 0; i < _entries.size(); i++) {
+				int row = rowOfEntry[i];
+				if (row < 0)
+					continue;
+				const Entry& e = _entries[i];
+
+				ImVec2 a = ImPlot::PlotToPixels(e._seconds, static_cast<double>(row) - kBarHalfHeight);
+				ImVec2 b = ImPlot::PlotToPixels(EndOf(e), static_cast<double>(row) + kBarHalfHeight);
+				ImVec2 pmin(a.x < b.x ? a.x : b.x, a.y < b.y ? a.y : b.y);
+				ImVec2 pmax(a.x < b.x ? b.x : a.x, a.y < b.y ? b.y : a.y);
+				if (pmax.x - pmin.x < 2.0f)
+					pmax.x = pmin.x + 2.0f;
+
+				ImVec4 color = ImPlot::GetColormapColor(row);
+				bool isHovered = hovered &&
+					mouse.x >= pmin.x && mouse.x <= pmax.x &&
+					mouse.y >= pmin.y && mouse.y <= pmax.y;
+				if (isHovered)
+					hoveredEntry = static_cast<int>(i);
+
+				ImU32 fill = ImGui::GetColorU32(ImVec4(color.x, color.y, color.z, isHovered ? 1.0f : 0.8f));
+				ImU32 edge = ImGui::GetColorU32(ImVec4(color.x * 0.6f, color.y * 0.6f, color.z * 0.6f, 1.0f));
+				draw->AddRectFilled(pmin, pmax, fill, 2.0f);
+				draw->AddRect(pmin, pmax, edge, 2.0f);
 			}
-		}
-		if (best != nullptr) {
-			char timeText[32] = { 0 };
-			FormatTime(best->_seconds, timeText, sizeof(timeText));
-			ImGui::BeginTooltip();
-			ImGui::Text("%s", _lanes[best->_lane]._name.c_str());
-			ImGui::Text("%s", best->_skillName.c_str());
-			ImGui::TextDisabled("%s", timeText);
-			ImGui::EndTooltip();
+			ImPlot::PopPlotClipRect();
+
+			if (hoveredEntry >= 0) {
+				const Entry& e = _entries[hoveredEntry];
+				char startText[32] = { 0 };
+				char endText[32] = { 0 };
+				FormatTime(e._seconds, startText, sizeof(startText));
+				FormatTime(EndOf(e), endText, sizeof(endText));
+				ImGui::BeginTooltip();
+				ImGui::Text("%s", _lanes[e._lane]._name.c_str());
+				ImGui::Text("%s", e._skillName.c_str());
+				ImGui::TextDisabled("%s - %s (%.2f s)", startText, endText, EndOf(e) - e._seconds);
+				ImGui::EndTooltip();
+			}
+
+			ImPlot::EndPlot();
 		}
 	}
-
-	ImPlot::EndPlot();
+	ImGui::EndChild();
 }
 
 void SkillTimeline::DrawList()
@@ -392,12 +486,13 @@ void SkillTimeline::DrawList()
 	}
 
 	ImGuiTableFlags flags = ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable;
-	if (!ImGui::BeginTable("SkillTimelineTable", 4, flags, ImVec2(0, 0)))
+	if (!ImGui::BeginTable("SkillTimelineTable", 5, flags, ImVec2(0, 0)))
 		return;
 
 	ImGui::TableSetupScrollFreeze(0, 1);
 	ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed, 50.0f);
 	ImGui::TableSetupColumn(LANGMANAGER.GetText("STR_PLOTWINDOW_SKILLTIMELINE_TIME").data(), ImGuiTableColumnFlags_WidthFixed, 90.0f);
+	ImGui::TableSetupColumn(LANGMANAGER.GetText("STR_PLOTWINDOW_SKILLTIMELINE_DURATION").data(), ImGuiTableColumnFlags_WidthFixed, 80.0f);
 	ImGui::TableSetupColumn(LANGMANAGER.GetText("STR_PLOTWINDOW_SKILLTIMELINE_PLAYER").data(), ImGuiTableColumnFlags_WidthFixed, 140.0f);
 	ImGui::TableSetupColumn(LANGMANAGER.GetText("STR_PLOTWINDOW_SKILLTIMELINE_SKILL").data(), ImGuiTableColumnFlags_WidthStretch);
 	ImGui::TableHeadersRow();
@@ -415,6 +510,8 @@ void SkillTimeline::DrawList()
 			ImGui::Text("%d", r + 1);
 			ImGui::TableNextColumn();
 			ImGui::Text("%s", timeText);
+			ImGui::TableNextColumn();
+			ImGui::Text("%.2f s", EndOf(e) - e._seconds);
 			ImGui::TableNextColumn();
 			ImGui::Text("%s", _lanes[e._lane]._name.c_str());
 			ImGui::TableNextColumn();
@@ -443,16 +540,17 @@ bool SkillTimeline::ExportCsv()
 	}
 
 	file << "\xEF\xBB\xBF";
-	file << "time_sec,time,player,skill_id,skill\r\n";
+	file << "start_sec,end_sec,duration_sec,time,player,skill_id,skill\r\n";
 
 	char timeText[32] = { 0 };
-	char seconds[32] = { 0 };
+	char numbers[96] = { 0 };
 	for (const Entry& e : _entries) {
 		if (!PassesFilter(e))
 			continue;
+		double end = EndOf(e);
 		FormatTime(e._seconds, timeText, sizeof(timeText));
-		sprintf_s(seconds, "%.3f", e._seconds);
-		file << seconds << ',' << timeText << ','
+		sprintf_s(numbers, "%.3f,%.3f,%.3f", e._seconds, end, end - e._seconds);
+		file << numbers << ',' << timeText << ','
 			<< CsvQuote(_lanes[e._lane]._name) << ',' << e._skillId << ','
 			<< CsvQuote(e._skillName) << "\r\n";
 	}
@@ -468,17 +566,21 @@ void SkillTimeline::CopyToClipboard()
 {
 	std::string text;
 	char timeText[32] = { 0 };
+	char duration[32] = { 0 };
 	for (const Entry& e : _entries) {
 		if (!PassesFilter(e))
 			continue;
 		FormatTime(e._seconds, timeText, sizeof(timeText));
+		sprintf_s(duration, "%.2fs", EndOf(e) - e._seconds);
 		text += "[";
 		text += timeText;
 		text += "] ";
 		text += _lanes[e._lane]._name;
 		text += " - ";
 		text += e._skillName;
-		text += "\n";
+		text += " (";
+		text += duration;
+		text += ")\n";
 	}
 	ImGui::SetClipboardText(text.c_str());
 }
