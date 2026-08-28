@@ -125,6 +125,8 @@ MSBuild "Soulworker Utility.sln" -m -p:Configuration=Release -p:Platform=x64
 
 Output lands in `x64\Release\`. The solution builds two projects — `Soulworker Utility` (the meter) and `SoulMeterHook` (the injected DLL) — and copies `Lang\*.json` into the output folder automatically.
 
+A Release build also stages a ready-to-ship copy in `x64\Release\package\` and zips it as `x64\Release\SoulMeter-<version>.zip` (the version comes from `Soulworker Utility\SWConfig.h`). The zip holds the meter, the hook DLL, `sqlite3.dll`, `SWDB.db`, `Lang\` and `Font\`. Fonts are not tracked in git — drop the `.ttf` you want to ship into `Soulworker Utility\Font\` before building, otherwise the build warns and the package goes out without one.
+
 > [!NOTE]
 > The hook locates the game's packet functions at runtime by signature-scanning `SoulWorker64.dll`, so a game patch that merely moves them needs no changes here. The scan fails closed — if the signature is missing or matches more than once, the hook simply never attaches rather than detouring the wrong code. If that happens, `kSerializeSig` in `SoulMeterHook/sockethooks.cpp` needs re-extracting.
 

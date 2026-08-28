@@ -364,6 +364,15 @@
   <ItemGroup>
     <Image Include="meter_ico.ico" />
   </ItemGroup>
+  <!-- Build-order only: the release package below picks up SoulMeterHook.dll,
+       so the hook has to be up to date before this project finishes. -->
+  <ItemGroup>
+    <ProjectReference Include="..\SoulMeterHook\SoulMeterHook.vcxproj">
+      <Project>{8f5d3a2b-6c1e-4d9f-9a3b-2e7f5c4d8a01}</Project>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
@@ -375,5 +384,42 @@
       <LangFiles Include="Lang\*.json" />
     </ItemGroup>
     <Copy SourceFiles="@(LangFiles)" DestinationFolder="$(OutDir)Lang" SkipUnchangedFiles="true" />
+  </Target>
+  <!-- Release package: everything a user needs, staged in $(OutDir)package\ and
+       zipped next to it as SoulMeter-<version>.zip. The version is read from
+       SWConfig.h so the zip name follows the one place it is defined. Fonts are
+       whatever .ttf files sit in Font\ - they are not tracked in git, so drop
+       one there (see README). -->
+  <PropertyGroup>
+    <SWConfigPath>$(MSBuildThisFileDirectory)SWConfig.h</SWConfigPath>
+    <AppVersionMajor>$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText($(SWConfigPath))), 'define MAJORNUMBER\s+(\d+)').Groups[1].Value)</AppVersionMajor>
+    <AppVersionMinor>$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText($(SWConfigPath))), 'define MINORNUMBER\s+(\d+)').Groups[1].Value)</AppVersionMinor>
+    <AppVersionBuild>$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText($(SWConfigPath))), 'define BUILDNUMBER\s+(\d+)').Groups[1].Value)</AppVersionBuild>
+    <AppVersionMod>$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText($(SWConfigPath))), 'define MODIFICATIONNUMBER\s+(\d+)').Groups[1].Value)</AppVersionMod>
+    <AppVersion>$(AppVersionMajor).$(AppVersionMinor).$(AppVersionBuild).$(AppVersionMod)</AppVersion>
+    <PackageDir>$(OutDir)package\</PackageDir>
+    <PackageZip>$(OutDir)SoulMeter-$(AppVersion).zip</PackageZip>
+  </PropertyGroup>
+  <Target Name="PackageRelease" AfterTargets="CopyLangFiles" Condition="'$(Configuration)' == 'Release'">
+    <PropertyGroup>
+      <HookDll Condition="Exists('$(OutDir)SoulMeterHook.dll')">$(OutDir)SoulMeterHook.dll</HookDll>
+      <HookDll Condition="'$(HookDll)' == '' And Exists('$(MSBuildThisFileDirectory)..\SoulMeterHook\$(Platform)\$(Configuration)\SoulMeterHook.dll')">$(MSBuildThisFileDirectory)..\SoulMeterHook\$(Platform)\$(Configuration)\SoulMeterHook.dll</HookDll>
+    </PropertyGroup>
+    <ItemGroup>
+      <PackageRoot Include="$(TargetPath)" />
+      <PackageRoot Include="$(HookDll)" Condition="'$(HookDll)' != ''" />
+      <PackageRoot Include="sqlite3.dll" />
+      <PackageRoot Include="SWDB.db" />
+      <PackageLang Include="Lang\*.json;Lang\replace.lang.example" />
+      <PackageFont Include="Font\*.ttf" />
+    </ItemGroup>
+    <Warning Text="SoulMeterHook.dll not found next to the build output; the package will ship without it." Condition="'$(HookDll)' == ''" />
+    <Warning Text="No .ttf in $(MSBuildThisFileDirectory)Font\; the package will ship without a font." Condition="'@(PackageFont)' == ''" />
+    <RemoveDir Directories="$(PackageDir)" />
+    <Copy SourceFiles="@(PackageRoot)" DestinationFolder="$(PackageDir)" />
+    <Copy SourceFiles="@(PackageLang)" DestinationFolder="$(PackageDir)Lang" />
+    <Copy SourceFiles="@(PackageFont)" DestinationFolder="$(PackageDir)Font" />
+    <ZipDirectory SourceDirectory="$(PackageDir)" DestinationFile="$(PackageZip)" Overwrite="true" />
+    <Message Importance="high" Text="Package -> $(PackageZip)" />
   </Target>
 </Project>
