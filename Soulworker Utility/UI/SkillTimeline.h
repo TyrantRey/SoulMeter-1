@@ -5,27 +5,26 @@
 //
 // Every USED_SKILL entry from the combat log becomes a bar: one row per
 // (player, skill), x = seconds on the raid timer. A bar runs from the cast
-// until that player's next cast, capped by an adjustable maximum, so the
-// chart reads as the rotation - what was pressed, in what order, with the
-// gaps. Each bar also carries the damage that cast dealt, summed from the
-// GIVE_DAMAGE entries of the same log:
+// to the last hit credited to it, so the chart reads as what was pressed,
+// when, and for how long it kept dealing damage; a cast with no damage is a
+// sliver. The damage comes from the GIVE_DAMAGE entries of the same log:
 //
 //  - A hit that carries a skill id belongs to the latest cast of that skill
-//    on the same lane, wherever on the timeline it lands. A damage-over-time
-//    skill therefore keeps its ticks even after the next skill is pressed,
-//    and its bar is stretched to the last of them. Many skills deal their
-//    damage under sub-skill ids that are never cast (52001715 Ghosty Hunt V
-//    hits as 52001721..24, 52001725 [A], 52001775 [B]); those fall back to
-//    the latest cast of the same skill family, ids grouped by hundreds.
+//    on the same lane, wherever on the timeline it lands, so a
+//    damage-over-time skill keeps its ticks even after the next skill is
+//    pressed. Many skills deal their damage under sub-skill ids that are
+//    never cast (52001715 Ghosty Hunt V hits as 52001721..24, 52001725 [A],
+//    52001775 [B]); those fall back to the latest cast of the same skill
+//    family, ids grouped by hundreds.
 //  - A hit without a usable skill id (histories saved before it was
 //    recorded, or a family that never appears as a cast on that lane) is
-//    credited to whichever bar of the lane covers it.
+//    credited to the lane's latest cast before it.
 //
-// The time axis zooms with the mouse wheel and pans by dragging; the chart
-// follows the data until the user does either, and the Fit button or a
-// double-click brings the whole run back. Below the chart is a filterable
-// chronological list; the same rows can be exported to CSV or copied to the
-// clipboard.
+// The time axis zooms with Ctrl + mouse wheel and pans by dragging (a plain
+// wheel scrolls the rows); the chart follows the data until the user does
+// either, and the Fit button or a double-click brings the whole run back.
+// Below the chart is a filterable chronological list; the same rows can be
+// exported to CSV or copied to the clipboard.
 //
 // Data source: USED_SKILL entries carry the skill id in _val1 and, since this
 // feature, the raid-timer elapsed time in milliseconds in _val2. Entries
@@ -65,7 +64,7 @@ private:
 		uint32_t _skillId;
 		double _seconds;      // cast time on the chart
 		uint64_t _timestamp;  // cast time, wall clock ms
-		double _next;         // same lane's next cast, or -1 when none yet
+		uint64_t _nextTimestamp;  // same lane's next cast, wall clock ms, 0 when none yet
 		DamageWindow _own;    // hits tied to this cast by skill id
 		double _lastOwnHit;   // seconds after the cast of the last such hit, or -1
 		std::string _skillName;
@@ -87,7 +86,6 @@ private:
 
 	bool _showBoss = false;
 	int _selectedLane = -1;               // -1 = all
-	float _maxBarSeconds = 3.0f;
 	char _search[128] = { 0 };
 	std::string _status;
 
@@ -95,15 +93,14 @@ private:
 	// until the user zooms or pans; Fit (or a double-click) returns to that.
 	bool _refit = true;                   // apply the data extents this frame
 	bool _following = true;               // view still equals the data extents
-	bool _plotAreaHovered = false;        // last frame; routes the mouse wheel
 
 	void RebuildIfNeeded();
 	void Rebuild();
 	const char* SkillName(uint32_t skillId);
 
 	bool PassesFilter(const Entry& e) const;
-	double RotationEndOf(const Entry& e) const;  // next cast on the lane, capped
-	double EndOf(const Entry& e) const;          // ... stretched to the skill's own last hit
+	void LooseRange(const Entry& e, size_t& a, size_t& b) const;  // loose hits in the cast's window
+	double EndOf(const Entry& e) const;                            // last hit credited to the cast
 	DamageWindow DamageIn(const Entry& e) const;
 
 	void FormatTime(double seconds, char* out, size_t len) const;

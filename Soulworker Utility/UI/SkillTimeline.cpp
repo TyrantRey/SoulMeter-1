@@ -17,7 +17,8 @@ namespace {
 	constexpr float kChartMinPx = 220.0f;
 	constexpr float kChartMaxShare = 0.6f;   // of the tab's remaining height
 	constexpr double kBarHalfHeight = 0.38;  // in row units
-	constexpr double kMinBarSeconds = 0.05;  // so a zero-length cast still shows
+	constexpr double kMinBarSeconds = 0.05;  // a cast with no damage is drawn this long
+	constexpr float kBarMinPx = 4.0f;        // ... and never thinner than this
 	constexpr float kBarLabelPadPx = 8.0f;
 
 	// A hit can be logged a moment before the cast packet that produced it;
@@ -253,13 +254,13 @@ void SkillTimeline::Rebuild()
 		e._skillId = t._raw._skillId;
 		e._seconds = t._seconds;
 		e._timestamp = t._raw._timestamp;
-		e._next = -1;
+		e._nextTimestamp = 0;
 		e._lastOwnHit = -1;
 		e._skillName = SkillName(t._raw._skillId);
 
-		// A cast ends the previous bar on the same lane.
+		// A cast closes the previous cast's loose-hit window on the same lane.
 		if (lastOfLane[li] >= 0)
-			entries[lastOfLane[li]]._next = t._seconds;
+			entries[lastOfLane[li]]._nextTimestamp = t._raw._timestamp;
 		lastOfLane[li] = static_cast<int>(entries.size());
 
 		entries.push_back(e);
@@ -362,44 +363,51 @@ bool SkillTimeline::PassesFilter(const Entry& e) const
 	return true;
 }
 
-// Where the bar ends as a rotation step: the lane's next cast, capped.
-double SkillTimeline::RotationEndOf(const Entry& e) const
+// Loose hits fall to the lane's latest cast before them: [a, b) indexes the
+// lane's loose arrays for this cast's window, which runs from the cast to
+// the lane's next cast, or open-ended for its last one.
+void SkillTimeline::LooseRange(const Entry& e, size_t& a, size_t& b) const
 {
-	double cap = e._seconds + static_cast<double>(_maxBarSeconds);
-	double end = (e._next < 0 || e._next > cap) ? cap : e._next;
-	if (end < e._seconds + kMinBarSeconds)
-		end = e._seconds + kMinBarSeconds;
-	return end;
+	const Lane& lane = _lanes[e._lane];
+	auto lo = std::lower_bound(lane._looseTimes.begin(), lane._looseTimes.end(), static_cast<double>(e._timestamp));
+	auto hi = lane._looseTimes.end();
+	if (e._nextTimestamp != 0)
+		hi = std::lower_bound(lo, lane._looseTimes.end(), static_cast<double>(e._nextTimestamp));
+	a = static_cast<size_t>(lo - lane._looseTimes.begin());
+	b = static_cast<size_t>(hi - lane._looseTimes.begin());
 }
 
-// The drawn end: the rotation step, stretched to the last hit the cast's own
-// skill landed, so a damage-over-time bar runs as long as it kept ticking.
+// The drawn end: the last hit credited to the cast, own or loose, or a
+// sliver when it dealt none.
 double SkillTimeline::EndOf(const Entry& e) const
 {
-	double end = RotationEndOf(e);
+	double end = e._seconds + kMinBarSeconds;
 	if (e._lastOwnHit >= 0 && e._seconds + e._lastOwnHit > end)
 		end = e._seconds + e._lastOwnHit;
+
+	size_t a, b;
+	LooseRange(e, a, b);
+	if (b > a) {
+		double lastLoose = e._seconds +
+			(_lanes[e._lane]._looseTimes[b - 1] - static_cast<double>(e._timestamp)) / 1000.0;
+		if (lastLoose > end)
+			end = lastLoose;
+	}
 	return end;
 }
 
-// The cast's own hits, plus loose hits that landed inside its rotation step.
+// The cast's own hits plus the loose hits in its window.
 SkillTimeline::DamageWindow SkillTimeline::DamageIn(const Entry& e) const
 {
 	DamageWindow w = e._own;
-	const Lane& lane = _lanes[e._lane];
-	if (lane._looseTimes.empty())
-		return w;
-
-	double from = static_cast<double>(e._timestamp);
-	double to = from + (RotationEndOf(e) - e._seconds) * 1000.0;
-	auto lo = std::lower_bound(lane._looseTimes.begin(), lane._looseTimes.end(), from);
-	auto hi = std::lower_bound(lane._looseTimes.begin(), lane._looseTimes.end(), to);
-	size_t a = static_cast<size_t>(lo - lane._looseTimes.begin());
-	size_t b = static_cast<size_t>(hi - lane._looseTimes.begin());
-
-	w._damage += lane._loosePrefix[b] - lane._loosePrefix[a];
-	w._hits += lane._looseHitPrefix[b] - lane._looseHitPrefix[a];
-	w._crits += lane._looseCritPrefix[b] - lane._looseCritPrefix[a];
+	size_t a, b;
+	LooseRange(e, a, b);
+	if (b > a) {
+		const Lane& lane = _lanes[e._lane];
+		w._damage += lane._loosePrefix[b] - lane._loosePrefix[a];
+		w._hits += lane._looseHitPrefix[b] - lane._looseHitPrefix[a];
+		w._crits += lane._looseCritPrefix[b] - lane._looseCritPrefix[a];
+	}
 	return w;
 }
 
@@ -559,11 +567,6 @@ void SkillTimeline::DrawControls()
 	ImGui::InputText(label, _search, IM_ARRAYSIZE(_search));
 
 	ImGui::SameLine();
-	sprintf_s(label, "%s###SkillTimelineMaxBar", LANGMANAGER.GetText("STR_PLOTWINDOW_SKILLTIMELINE_MAXBAR").data());
-	ImGui::SetNextItemWidth(160.0f);
-	ImGui::SliderFloat(label, &_maxBarSeconds, 0.5f, 15.0f, "%.1f s");
-
-	ImGui::SameLine();
 	if (ImGui::Button(LANGMANAGER.GetText("STR_PLOTWINDOW_SKILLTIMELINE_EXPORT").data()))
 		ExportCsv();
 	ImGui::SameLine();
@@ -633,16 +636,15 @@ void SkillTimeline::DrawGantt()
 		region = kChartMinPx;
 	float childHeight = (wanted < region) ? wanted : region;
 
-	// The wheel zooms the time axis while the mouse is over the plot area and
-	// scrolls the rows anywhere else in the chart (the axis strips), so both
-	// stay reachable without a modifier key. Hover state is a frame old.
-	ImGuiWindowFlags childFlags = _plotAreaHovered ? ImGuiWindowFlags_NoScrollWithMouse : 0;
+	// Ctrl + wheel zooms the time axis. A plain wheel keeps scrolling the
+	// rows - ImGui has already done that by now and skips scrolling while
+	// Ctrl is held - so only the zoom needs gating here.
 	ImGuiIO& io = ImGui::GetIO();
 	float wheel = io.MouseWheel;
-	if (!_plotAreaHovered)
+	if (!io.KeyCtrl)
 		io.MouseWheel = 0.0f;
 
-	ImGui::BeginChild("SkillTimelineGantt", ImVec2(0, childHeight), false, childFlags);
+	ImGui::BeginChild("SkillTimelineGantt", ImVec2(0, childHeight), false);
 	{
 		// Follow the data until the user zooms or pans away from its extents.
 		if (_refit || _following) {
@@ -652,7 +654,6 @@ void SkillTimeline::DrawGantt()
 		ImPlot::SetNextPlotLimitsY(-0.5, static_cast<double>(rows.size()) - 0.5, ImGuiCond_Always);
 		ImPlot::SetNextPlotTicksY(tickValues.data(), static_cast<int>(tickValues.size()), tickLabels.data());
 
-		_plotAreaHovered = false;
 		if (ImPlot::BeginPlot("##SkillTimelineGantt",
 			LANGMANAGER.GetText("STR_PLOTWINDOW_TIME_SEC").data(), nullptr,
 			ImVec2(-1, wanted),
@@ -673,7 +674,6 @@ void SkillTimeline::DrawGantt()
 			ImDrawList* draw = ImPlot::GetPlotDrawList();
 			ImVec2 mouse = ImGui::GetMousePos();
 			bool hovered = ImPlot::IsPlotHovered();
-			_plotAreaHovered = hovered;
 			int hoveredEntry = -1;
 			char barText[32] = { 0 };
 
@@ -688,8 +688,8 @@ void SkillTimeline::DrawGantt()
 				ImVec2 b = ImPlot::PlotToPixels(EndOf(e), static_cast<double>(row) + kBarHalfHeight);
 				ImVec2 pmin(a.x < b.x ? a.x : b.x, a.y < b.y ? a.y : b.y);
 				ImVec2 pmax(a.x < b.x ? b.x : a.x, a.y < b.y ? b.y : a.y);
-				if (pmax.x - pmin.x < 2.0f)
-					pmax.x = pmin.x + 2.0f;
+				if (pmax.x - pmin.x < kBarMinPx)
+					pmax.x = pmin.x + kBarMinPx;
 
 				ImVec4 color = ImPlot::GetColormapColor(row);
 				bool isHovered = hovered &&
