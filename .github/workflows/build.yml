@@ -1,0 +1,106 @@
+# Builds the meter on every push and pull request, keeps the release zip as a
+# workflow artifact, and publishes a GitHub Release when main carries a version
+# (Soulworker Utility\SWConfig.h) that has not been released yet. A hand-made
+# tag vX.Y.Z.W is released too, provided it matches SWConfig.h.
+#
+# The font is not tracked in git. To ship one, either commit a .ttf under
+# "Soulworker Utility\Font\" or set the repository variable SOULMETER_FONT_URL
+# to a direct download link; the build warns and packages without a font when
+# neither is present.
+
+name: Build
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Superseded pushes to a branch cancel the older build; main and tags finish
+# so a release is never cut short.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref_type != 'tag' }}
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Fetch font
+        if: vars.SOULMETER_FONT_URL != ''
+        shell: pwsh
+        run: |
+          $dir = "Soulworker Utility/Font"
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          Invoke-WebRequest -Uri "${{ vars.SOULMETER_FONT_URL }}" -OutFile "$dir/NotoSansAll-Bold.ttf"
+          Get-Item "$dir/NotoSansAll-Bold.ttf" | Select-Object Name, Length
+
+      - name: Set up MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build
+        shell: pwsh
+        run: msbuild "Soulworker Utility.sln" -m -p:Configuration=Release -p:Platform=x64 -v:m
+
+      - name: Read version
+        id: version
+        shell: pwsh
+        run: |
+          $header = Get-Content "Soulworker Utility/SWConfig.h" -Raw
+          $parts = 'MAJORNUMBER', 'MINORNUMBER', 'BUILDNUMBER', 'MODIFICATIONNUMBER' | ForEach-Object {
+            [regex]::Match($header, "define $_\s+(\d+)").Groups[1].Value
+          }
+          $version = $parts -join '.'
+          if ($version -notmatch '^\d+\.\d+\.\d+\.\d+$') { throw "Could not read the version from SWConfig.h" }
+          $zip = Get-Item "x64/Release/SoulMeter-$version.zip" -ErrorAction Stop
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "zip=$($zip.FullName)" >> $env:GITHUB_OUTPUT
+          Write-Host "SoulMeter $version -> $($zip.Name) ($([math]::Round($zip.Length / 1MB, 1)) MB)"
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: SoulMeter-${{ steps.version.outputs.version }}
+          path: ${{ steps.version.outputs.zip }}
+          if-no-files-found: error
+
+      - name: Release
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref_type == 'tag')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          ZIP: ${{ steps.version.outputs.zip }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          $tag = "v$env:VERSION"
+
+          if ($env:REF_TYPE -eq 'tag' -and $env:REF_NAME -ne $tag) {
+            throw "Tag $env:REF_NAME does not match SWConfig.h ($tag); bump SWConfig.h or retag."
+          }
+
+          gh release view $tag *> $null
+          $exists = ($LASTEXITCODE -eq 0)
+
+          if ($exists -and $env:REF_TYPE -ne 'tag') {
+            Write-Host "$tag is already released; bump SWConfig.h to publish a new one."
+            exit 0
+          }
+
+          if ($exists) {
+            # Re-run of a tag build: refresh the asset on the existing release.
+            gh release upload $tag $env:ZIP --clobber
+          }
+          else {
+            gh release create $tag $env:ZIP --title "SoulMeter $env:VERSION" --generate-notes --target $env:GITHUB_SHA
+          }
+          if ($LASTEXITCODE -ne 0) { throw "gh release failed" }
