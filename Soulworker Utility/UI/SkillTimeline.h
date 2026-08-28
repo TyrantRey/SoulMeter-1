@@ -21,8 +21,11 @@
 //    recorded, or a family that never appears as a cast on that lane) is
 //    credited to whichever bar of the lane covers it.
 //
-// Below the chart is a filterable chronological list; the same rows can be
-// exported to CSV or copied to the clipboard.
+// The time axis zooms with the mouse wheel and pans by dragging; the chart
+// follows the data until the user does either, and the Fit button or a
+// double-click brings the whole run back. Below the chart is a filterable
+// chronological list; the same rows can be exported to CSV or copied to the
+// clipboard.
 //
 // Data source: USED_SKILL entries carry the skill id in _val1 and, since this
 // feature, the raid-timer elapsed time in milliseconds in _val2. Entries
@@ -87,6 +90,12 @@ private:
 	float _maxBarSeconds = 3.0f;
 	char _search[128] = { 0 };
 	std::string _status;
+
+	// Time-axis view: the chart shows the whole run and keeps following it
+	// until the user zooms or pans; Fit (or a double-click) returns to that.
+	bool _refit = true;                   // apply the data extents this frame
+	bool _following = true;               // view still equals the data extents
+	bool _plotAreaHovered = false;        // last frame; routes the mouse wheel
 
 	void RebuildIfNeeded();
 	void Rebuild();

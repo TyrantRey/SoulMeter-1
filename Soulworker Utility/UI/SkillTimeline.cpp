@@ -569,6 +569,11 @@ void SkillTimeline::DrawControls()
 	ImGui::SameLine();
 	if (ImGui::Button(LANGMANAGER.GetText("STR_PLOTWINDOW_SKILLTIMELINE_COPY").data()))
 		CopyToClipboard();
+	ImGui::SameLine();
+	if (ImGui::Button(LANGMANAGER.GetText("STR_PLOTWINDOW_SKILLTIMELINE_FIT").data()))
+		_refit = true;
+	if (ImGui::IsItemHovered())
+		ImGui::SetTooltip("%s", LANGMANAGER.GetText("STR_PLOTWINDOW_SKILLTIMELINE_ZOOM_HINT").data());
 
 	size_t shown = 0;
 	double shownDamage = 0;
@@ -628,24 +633,47 @@ void SkillTimeline::DrawGantt()
 		region = kChartMinPx;
 	float childHeight = (wanted < region) ? wanted : region;
 
-	ImGui::BeginChild("SkillTimelineGantt", ImVec2(0, childHeight), false);
+	// The wheel zooms the time axis while the mouse is over the plot area and
+	// scrolls the rows anywhere else in the chart (the axis strips), so both
+	// stay reachable without a modifier key. Hover state is a frame old.
+	ImGuiWindowFlags childFlags = _plotAreaHovered ? ImGuiWindowFlags_NoScrollWithMouse : 0;
+	ImGuiIO& io = ImGui::GetIO();
+	float wheel = io.MouseWheel;
+	if (!_plotAreaHovered)
+		io.MouseWheel = 0.0f;
+
+	ImGui::BeginChild("SkillTimelineGantt", ImVec2(0, childHeight), false, childFlags);
 	{
+		// Follow the data until the user zooms or pans away from its extents.
+		if (_refit || _following) {
+			ImPlot::SetNextPlotLimitsX(minX, maxX, ImGuiCond_Always);
+			_refit = false;
+		}
 		ImPlot::SetNextPlotLimitsY(-0.5, static_cast<double>(rows.size()) - 0.5, ImGuiCond_Always);
 		ImPlot::SetNextPlotTicksY(tickValues.data(), static_cast<int>(tickValues.size()), tickLabels.data());
 
+		_plotAreaHovered = false;
 		if (ImPlot::BeginPlot("##SkillTimelineGantt",
 			LANGMANAGER.GetText("STR_PLOTWINDOW_TIME_SEC").data(), nullptr,
 			ImVec2(-1, wanted),
-			ImPlotFlags_NoLegend | ImPlotFlags_NoMousePos | ImPlotFlags_NoChild,
-			ImPlotAxisFlags_AutoFit,
+			ImPlotFlags_NoLegend | ImPlotFlags_NoMousePos | ImPlotFlags_NoChild | ImPlotFlags_NoMenus,
+			ImPlotAxisFlags_None,
 			ImPlotAxisFlags_Lock | ImPlotAxisFlags_NoGridLines | ImPlotAxisFlags_Invert))
 		{
+			// ImPlot has applied this frame's zoom/pan by now; a double-click
+			// fit lands exactly on the extents too (FitPadding is zero), so
+			// the same test also picks following back up after one.
+			ImPlotLimits limits = ImPlot::GetPlotLimits();
+			double tol = (maxX - minX) * 1e-6 + 1e-9;
+			_following = fabs(limits.X.Min - minX) <= tol && fabs(limits.X.Max - maxX) <= tol;
+
 			ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 0.0f, ImVec4(0, 0, 0, 0), 0.0f, ImVec4(0, 0, 0, 0));
 			ImPlot::PlotScatter("##fit", fitX, fitY, 2);
 
 			ImDrawList* draw = ImPlot::GetPlotDrawList();
 			ImVec2 mouse = ImGui::GetMousePos();
 			bool hovered = ImPlot::IsPlotHovered();
+			_plotAreaHovered = hovered;
 			int hoveredEntry = -1;
 			char barText[32] = { 0 };
 
@@ -713,6 +741,7 @@ void SkillTimeline::DrawGantt()
 		}
 	}
 	ImGui::EndChild();
+	io.MouseWheel = wheel;
 }
 
 void SkillTimeline::DrawList()
