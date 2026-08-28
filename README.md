@@ -14,8 +14,6 @@ Live damage tables, per-player breakdowns, buff uptime, DPS graphs, a skill time
 [![Build](https://github.com/TyrantRey/SoulMeter-1/actions/workflows/build.yml/badge.svg)](https://github.com/TyrantRey/SoulMeter-1/actions/workflows/build.yml)
 [![Release](https://img.shields.io/github/v/release/TyrantRey/SoulMeter-1?display_name=tag&color=brightgreen)](https://github.com/TyrantRey/SoulMeter-1/releases/latest)
 
-[<img src="https://cdn.buymeacoffee.com/buttons/v2/default-blue.png" height="48" alt="Buy me a coffee">](https://www.buymeacoffee.com/rainyyy)
-
 </div>
 
 ---
