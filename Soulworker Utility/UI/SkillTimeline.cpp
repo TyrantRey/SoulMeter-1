@@ -20,6 +20,10 @@ namespace {
 	constexpr double kMinBarSeconds = 0.05;  // so a zero-length cast still shows
 	constexpr float kBarLabelPadPx = 8.0f;
 
+	// A hit can be logged a moment before the cast packet that produced it;
+	// when no earlier cast of that skill exists, one this close still claims it.
+	constexpr double kCastLeadMs = 250.0;
+
 	// Raw entries copied out of the combat log while its lock is held; names
 	// are resolved afterwards so no other lock is taken under the combat lock.
 	struct RawCast {
@@ -36,6 +40,7 @@ namespace {
 		uint64_t _timestamp;
 		double _damage;
 		bool _crit;
+		uint32_t _skillId;   // 0 when the log predates it
 	};
 
 	std::string CsvQuote(const std::string& s)
@@ -58,6 +63,15 @@ namespace {
 	uint64_t LaneKey(uint32_t id, bool isPlayer)
 	{
 		return (static_cast<uint64_t>(isPlayer) << 32) | id;
+	}
+
+	// Skill ids are grouped by hundreds: the last two digits carry the level
+	// (52001715 = Ghosty Hunt V) or the index of one of its sub-hits
+	// (52001721 = Ghosty Hunt V - Ghosty Hunt I, 52001775 = Ghosty Hunt V [B]).
+	// A hit whose exact id was never cast is tied to a cast of its family.
+	uint32_t SkillFamily(uint32_t skillId)
+	{
+		return skillId / 100;
 	}
 }
 
@@ -150,6 +164,7 @@ void SkillTimeline::Rebuild()
 					hit._timestamp = log->first;
 					hit._damage = pLog->_val1;
 					hit._crit = pLog->_type == CombatLogType::GIVE_DAMAGE_CRIT;
+					hit._skillId = static_cast<uint32_t>(pLog->_val3);
 					hits.push_back(hit);
 					break;
 				}
@@ -237,7 +252,9 @@ void SkillTimeline::Rebuild()
 		e._lane = li;
 		e._skillId = t._raw._skillId;
 		e._seconds = t._seconds;
+		e._timestamp = t._raw._timestamp;
 		e._next = -1;
+		e._lastOwnHit = -1;
 		e._skillName = SkillName(t._raw._skillId);
 
 		// A cast ends the previous bar on the same lane.
@@ -248,25 +265,82 @@ void SkillTimeline::Rebuild()
 		entries.push_back(e);
 	}
 
-	// Damage per lane, time-sorted with prefix sums. Hits from entities that
+	// Damage. A hit goes to the latest cast of its skill on the same lane -
+	// by exact id first, then by skill family - compared by wall clock, which
+	// both sides share; anything that cannot be tied to a cast that way is
+	// "loose" and falls to whichever bar covers it. Hits from entities that
 	// never cast anything have no lane and are dropped.
+	std::unordered_map<uint64_t, std::vector<size_t>> castsOf;      // (lane, skill id)
+	std::unordered_map<uint64_t, std::vector<size_t>> familyCasts;  // (lane, skill family)
+	for (size_t i = 0; i < entries.size(); i++) {
+		castsOf[RowKey(entries[i]._lane, entries[i]._skillId)].push_back(i);
+		familyCasts[RowKey(entries[i]._lane, SkillFamily(entries[i]._skillId))].push_back(i);
+	}
+	auto byTime = [&entries](size_t a, size_t b) {
+		return entries[a]._timestamp < entries[b]._timestamp;
+	};
+	for (auto& kv : castsOf)
+		std::sort(kv.second.begin(), kv.second.end(), byTime);
+	for (auto& kv : familyCasts)
+		std::sort(kv.second.begin(), kv.second.end(), byTime);
+
+	// The latest of these casts at or before the hit, or one following it
+	// within kCastLeadMs when there is none before; -1 when neither.
+	auto claim = [&entries](const std::vector<size_t>& casts, uint64_t hitTs) -> int {
+		auto after = std::upper_bound(casts.begin(), casts.end(), hitTs,
+			[&entries](uint64_t ts, size_t idx) { return ts < entries[idx]._timestamp; });
+		if (after != casts.begin())
+			return static_cast<int>(*(after - 1));
+		if (after != casts.end() &&
+			static_cast<double>(entries[*after]._timestamp - hitTs) <= kCastLeadMs)
+			return static_cast<int>(*after);
+		return -1;
+	};
+
 	std::stable_sort(hits.begin(), hits.end(), [](const RawHit& a, const RawHit& b) {
 		return a._timestamp < b._timestamp;
 	});
 	for (Lane& lane : lanes) {
-		lane._dmgPrefix.push_back(0);
-		lane._hitPrefix.push_back(0);
-		lane._critPrefix.push_back(0);
+		lane._loosePrefix.push_back(0);
+		lane._looseHitPrefix.push_back(0);
+		lane._looseCritPrefix.push_back(0);
 	}
 	for (const RawHit& hit : hits) {
 		auto found = laneIndex.find(LaneKey(hit._id, hit._isPlayer));
 		if (found == laneIndex.end())
 			continue;
-		Lane& lane = lanes[found->second];
-		lane._dmgTimes.push_back((static_cast<double>(hit._timestamp) - originTs) / 1000.0);
-		lane._dmgPrefix.push_back(lane._dmgPrefix.back() + hit._damage);
-		lane._hitPrefix.push_back(lane._hitPrefix.back() + 1);
-		lane._critPrefix.push_back(lane._critPrefix.back() + (hit._crit ? 1 : 0));
+		size_t li = found->second;
+
+		int owner = -1;
+		if (hit._skillId != 0) {
+			auto exact = castsOf.find(RowKey(li, hit._skillId));
+			if (exact != castsOf.end())
+				owner = claim(exact->second, hit._timestamp);
+			if (owner < 0) {
+				auto family = familyCasts.find(RowKey(li, SkillFamily(hit._skillId)));
+				if (family != familyCasts.end())
+					owner = claim(family->second, hit._timestamp);
+			}
+		}
+
+		if (owner >= 0) {
+			Entry& e = entries[owner];
+			e._own._damage += hit._damage;
+			e._own._hits += 1;
+			e._own._crits += hit._crit ? 1 : 0;
+			double offset = (static_cast<double>(hit._timestamp) - static_cast<double>(e._timestamp)) / 1000.0;
+			if (offset < 0)
+				offset = 0;
+			if (offset > e._lastOwnHit)
+				e._lastOwnHit = offset;
+		}
+		else {
+			Lane& lane = lanes[li];
+			lane._looseTimes.push_back(static_cast<double>(hit._timestamp));
+			lane._loosePrefix.push_back(lane._loosePrefix.back() + hit._damage);
+			lane._looseHitPrefix.push_back(lane._looseHitPrefix.back() + 1);
+			lane._looseCritPrefix.push_back(lane._looseCritPrefix.back() + (hit._crit ? 1 : 0));
+		}
 	}
 
 	_lanes.swap(lanes);
@@ -288,7 +362,8 @@ bool SkillTimeline::PassesFilter(const Entry& e) const
 	return true;
 }
 
-double SkillTimeline::EndOf(const Entry& e) const
+// Where the bar ends as a rotation step: the lane's next cast, capped.
+double SkillTimeline::RotationEndOf(const Entry& e) const
 {
 	double cap = e._seconds + static_cast<double>(_maxBarSeconds);
 	double end = (e._next < 0 || e._next > cap) ? cap : e._next;
@@ -297,22 +372,34 @@ double SkillTimeline::EndOf(const Entry& e) const
 	return end;
 }
 
-// Damage landed in [cast, end of bar).
+// The drawn end: the rotation step, stretched to the last hit the cast's own
+// skill landed, so a damage-over-time bar runs as long as it kept ticking.
+double SkillTimeline::EndOf(const Entry& e) const
+{
+	double end = RotationEndOf(e);
+	if (e._lastOwnHit >= 0 && e._seconds + e._lastOwnHit > end)
+		end = e._seconds + e._lastOwnHit;
+	return end;
+}
+
+// The cast's own hits, plus loose hits that landed inside its rotation step.
 SkillTimeline::DamageWindow SkillTimeline::DamageIn(const Entry& e) const
 {
-	DamageWindow w;
+	DamageWindow w = e._own;
 	const Lane& lane = _lanes[e._lane];
-	if (lane._dmgTimes.empty())
+	if (lane._looseTimes.empty())
 		return w;
 
-	auto lo = std::lower_bound(lane._dmgTimes.begin(), lane._dmgTimes.end(), e._seconds);
-	auto hi = std::lower_bound(lane._dmgTimes.begin(), lane._dmgTimes.end(), EndOf(e));
-	size_t a = static_cast<size_t>(lo - lane._dmgTimes.begin());
-	size_t b = static_cast<size_t>(hi - lane._dmgTimes.begin());
+	double from = static_cast<double>(e._timestamp);
+	double to = from + (RotationEndOf(e) - e._seconds) * 1000.0;
+	auto lo = std::lower_bound(lane._looseTimes.begin(), lane._looseTimes.end(), from);
+	auto hi = std::lower_bound(lane._looseTimes.begin(), lane._looseTimes.end(), to);
+	size_t a = static_cast<size_t>(lo - lane._looseTimes.begin());
+	size_t b = static_cast<size_t>(hi - lane._looseTimes.begin());
 
-	w._damage = lane._dmgPrefix[b] - lane._dmgPrefix[a];
-	w._hits = lane._hitPrefix[b] - lane._hitPrefix[a];
-	w._crits = lane._critPrefix[b] - lane._critPrefix[a];
+	w._damage += lane._loosePrefix[b] - lane._loosePrefix[a];
+	w._hits += lane._looseHitPrefix[b] - lane._looseHitPrefix[a];
+	w._crits += lane._looseCritPrefix[b] - lane._looseCritPrefix[a];
 	return w;
 }
 

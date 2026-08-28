@@ -114,6 +114,7 @@ void SWDamageMeter::AddDamage(uint32_t id, uint64_t totalDMG, uint64_t soulstone
 		pCombatLog->_type = COMBATMETER.ConvertDamageTypeForGiveDamage(damageType);
 		pCombatLog->_val1 = static_cast<double>(totalDMG);
 		pCombatLog->_val2 = static_cast<double>(soulstoneDMG);
+		pCombatLog->_val3 = static_cast<double>(skillID);
 		COMBATMETER.Insert(id, CombatType::PLAYER, pCombatLog);
 	}
 	else {
@@ -151,12 +152,14 @@ void SWDamageMeter::AddPlayerGetDamage(uint32_t playerId, uint64_t totalDMG, SWP
 		CombatLog* pCombatLog = new CombatLog;
 		pCombatLog->_type = COMBATMETER.ConvertDamageTypeForTakeDamage(damageType);
 		pCombatLog->_val1 = static_cast<double>(totalDMG);
+		pCombatLog->_val3 = static_cast<double>(skillID);
 		COMBATMETER.Insert(playerId, CombatType::PLAYER, pCombatLog);
 
 		pCombatLog = new CombatLog;
 		pCombatLog->_type = COMBATMETER.ConvertDamageTypeForGiveDamage(damageType);
 		pCombatLog->_val1 = static_cast<double>(totalDMG);
 		pCombatLog->_val2 = playerId;
+		pCombatLog->_val3 = static_cast<double>(skillID);
 		COMBATMETER.Insert(monsterDB2, CombatType::MONSTER, pCombatLog);
 	}
 

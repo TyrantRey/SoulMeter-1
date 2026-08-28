@@ -38,6 +38,7 @@ struct CombatLog
 	CombatLogType _type;
 	double _val1 = 0;
 	double _val2 = 0;
+	double _val3 = 0;   // GIVE/TAKE_DAMAGE: skill id (0 in histories saved before it was recorded)
 };
 
 class Combat : public MemoryPool<Combat> {
@@ -101,6 +102,7 @@ public:
 			tclb.add__time(&sTime);
 			tclb.add__val1(pCombatLog->_val1);
 			tclb.add__val2(pCombatLog->_val2);
+			tclb.add__val3(pCombatLog->_val3);
 			tclb.add__timestamp(itr->first);
 
 			vCombatLog.push_back(tclb.Finish());
@@ -138,6 +140,7 @@ public:
 			pCombatLog->_time = pSysTime;
 			pCombatLog->_val1 = itr->_val1();
 			pCombatLog->_val2 = itr->_val2();
+			pCombatLog->_val3 = itr->_val3();
 
 			_log.push_back(std::pair(itr->_timestamp(), pCombatLog));
 		}
