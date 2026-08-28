@@ -10,6 +10,7 @@ Live damage tables, per-player breakdowns, buff uptime, DPS graphs and a combat 
 
 ![Platform](https://img.shields.io/badge/platform-Windows%20x64-0078D6)
 ![Language](https://img.shields.io/badge/C%2B%2B-20-00599C)
+[![Build](https://github.com/TyrantRey/SoulMeter-1/actions/workflows/build.yml/badge.svg)](https://github.com/TyrantRey/SoulMeter-1/actions/workflows/build.yml)
 ![UI](https://img.shields.io/badge/UI-ImGui%20%2B%20DirectX%2011-5C2D91)
 ![Version](https://img.shields.io/badge/version-1.7.1.13-brightgreen)
 
@@ -30,6 +31,7 @@ SoulMeter reads the game's network traffic and turns it into a live picture of y
 | **Buff tracking** | Uptime for armour break, attack speed, boss damage and more |
 | **DPS graphs** | Damage-over-time plots per player, powered by ImPlot |
 | **Combat log** | A recorded blow-by-blow of the encounter |
+| **Skill timeline** | Every skill cast plotted per player against the raid clock as a zoomable Gantt chart with the damage each cast dealt, plus a filterable list and CSV export |
 | **History** | The last 50 runs are kept and can be reopened and compared |
 | **Ping** | Live latency, measured from the game's own heartbeat exchange |
 | **Faster loading** | Cuts cold game startup from ~95s to ~38s — see [Load-time optimisations](#load-time-optimisations) |
@@ -123,6 +125,17 @@ MSBuild "Soulworker Utility.sln" -m -p:Configuration=Release -p:Platform=x64
 ```
 
 Output lands in `x64\Release\`. The solution builds two projects — `Soulworker Utility` (the meter) and `SoulMeterHook` (the injected DLL) — and copies `Lang\*.json` into the output folder automatically.
+
+A Release build also stages a ready-to-ship copy in `x64\Release\package\` and zips it as `x64\Release\SoulMeter-<version>.zip` (the version comes from `Soulworker Utility\SWConfig.h`). The zip holds the meter, the hook DLL, `sqlite3.dll`, `SWDB.db`, `Lang\` and `Font\`. Fonts are not tracked in git — drop the `.ttf` you want to ship into `Soulworker Utility\Font\` before building, otherwise the build warns and the package goes out without one.
+
+### Continuous builds and releases
+
+[`.github/workflows/build.yml`](.github/workflows/build.yml) runs the same build on GitHub Actions:
+
+- **Every push and pull request** builds Release x64 and keeps `SoulMeter-<version>.zip` as a workflow artifact.
+- **Pushing to `main`** publishes a GitHub Release `v<version>` — tag, auto-generated notes and the zip — whenever `SWConfig.h` carries a version that has not been released yet. Bumping the version there is the whole release process; an already-released version is left untouched.
+- A hand-made tag `vX.Y.Z.W` is released the same way, and must match `SWConfig.h`.
+- To ship a font from CI, set the repository variable `SOULMETER_FONT_URL` (Settings → Secrets and variables → Actions → Variables) to a direct download link, or commit a `.ttf` under `Soulworker Utility\Font\`.
 
 > [!NOTE]
 > The hook locates the game's packet functions at runtime by signature-scanning `SoulWorker64.dll`, so a game patch that merely moves them needs no changes here. The scan fails closed — if the signature is missing or matches more than once, the hook simply never attaches rather than detouring the wrong code. If that happens, `kSerializeSig` in `SoulMeterHook/sockethooks.cpp` needs re-extracting.

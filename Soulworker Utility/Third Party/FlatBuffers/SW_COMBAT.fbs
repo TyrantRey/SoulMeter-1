@@ -18,6 +18,7 @@ table _tCombatLog {
   _log_type:uint;
   _val1:double;
   _val2:double;
+  _val3:double;
 }
 
 root_type _tCombatInterface;

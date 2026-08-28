@@ -43,6 +43,7 @@ void SWPacketOtherUseSkill::Do() {
 	CombatLog* pCombatLog = new CombatLog;
 	pCombatLog->_type = CombatLogType::USED_SKILL;
 	pCombatLog->_val1 = otherSkill->_skillId;
+	pCombatLog->_val2 = static_cast<double>(DAMAGEMETER.GetTime());
 	COMBATMETER.Insert(userId, isPlayer ? CombatType::PLAYER : CombatType::MONSTER, pCombatLog);
 
 	/*uint32_t userId = otherSkill->_playerId;

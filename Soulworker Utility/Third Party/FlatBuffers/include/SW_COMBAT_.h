@@ -155,7 +155,8 @@ struct _tCombatLog FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT__TIMESTAMP = 6,
     VT__LOG_TYPE = 8,
     VT__VAL1 = 10,
-    VT__VAL2 = 12
+    VT__VAL2 = 12,
+    VT__VAL3 = 14
   };
   const SoulMeterFBS::History::_sTime *_time() const {
     return GetStruct<const SoulMeterFBS::History::_sTime *>(VT__TIME);
@@ -172,6 +173,9 @@ struct _tCombatLog FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   double _val2() const {
     return GetField<double>(VT__VAL2, 0.0);
   }
+  double _val3() const {
+    return GetField<double>(VT__VAL3, 0.0);
+  }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<SoulMeterFBS::History::_sTime>(verifier, VT__TIME) &&
@@ -179,6 +183,7 @@ struct _tCombatLog FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            VerifyField<uint32_t>(verifier, VT__LOG_TYPE) &&
            VerifyField<double>(verifier, VT__VAL1) &&
            VerifyField<double>(verifier, VT__VAL2) &&
+           VerifyField<double>(verifier, VT__VAL3) &&
            verifier.EndTable();
   }
 };
@@ -202,6 +207,9 @@ struct _tCombatLogBuilder {
   void add__val2(double _val2) {
     fbb_.AddElement<double>(_tCombatLog::VT__VAL2, _val2, 0.0);
   }
+  void add__val3(double _val3) {
+    fbb_.AddElement<double>(_tCombatLog::VT__VAL3, _val3, 0.0);
+  }
   explicit _tCombatLogBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -219,8 +227,10 @@ inline flatbuffers::Offset<_tCombatLog> Create_tCombatLog(
     int64_t _timestamp = 0,
     uint32_t _log_type = 0,
     double _val1 = 0.0,
-    double _val2 = 0.0) {
+    double _val2 = 0.0,
+    double _val3 = 0.0) {
   _tCombatLogBuilder builder_(_fbb);
+  builder_.add__val3(_val3);
   builder_.add__val2(_val2);
   builder_.add__val1(_val1);
   builder_.add__timestamp(_timestamp);
