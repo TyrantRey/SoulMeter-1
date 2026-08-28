@@ -6,13 +6,13 @@
 
 **A real-time DPS meter and combat overlay for [SoulWorker](https://store.steampowered.com/app/1377580/Soulworker/).**
 
-Live damage tables, per-player breakdowns, buff uptime, DPS graphs and a combat log — drawn straight over the game.
+Live damage tables, per-player breakdowns, buff uptime, DPS graphs, a skill timeline and a combat log — drawn straight over the game.
 
 ![Platform](https://img.shields.io/badge/platform-Windows%20x64-0078D6)
 ![Language](https://img.shields.io/badge/C%2B%2B-20-00599C)
-[![Build](https://github.com/TyrantRey/SoulMeter-1/actions/workflows/build.yml/badge.svg)](https://github.com/TyrantRey/SoulMeter-1/actions/workflows/build.yml)
 ![UI](https://img.shields.io/badge/UI-ImGui%20%2B%20DirectX%2011-5C2D91)
-![Version](https://img.shields.io/badge/version-1.7.1.13-brightgreen)
+[![Build](https://github.com/TyrantRey/SoulMeter-1/actions/workflows/build.yml/badge.svg)](https://github.com/TyrantRey/SoulMeter-1/actions/workflows/build.yml)
+[![Release](https://img.shields.io/github/v/release/TyrantRey/SoulMeter-1?display_name=tag&color=brightgreen)](https://github.com/TyrantRey/SoulMeter-1/releases/latest)
 
 </div>
 
@@ -27,13 +27,13 @@ SoulMeter reads the game's network traffic and turns it into a live picture of y
 | **Damage table** | Live DPS, total damage, share %, crit rate and hit counts for every player in your party |
 | **Per-player detail** | Click a name to break a player down by skill — damage, casts, crit rate, average hit |
 | **Buff tracking** | Uptime for armour break, attack speed, boss damage and more |
-| **DPS graphs** | Damage-over-time plots per player, powered by ImPlot |
+| **DPS graphs** | Damage-over-time plots per player |
+| **Skill timeline** | Every cast per player on the raid clock as a Gantt chart — each bar spans the time its skill kept hitting and shows the damage it dealt — with a filterable list and CSV export |
 | **Combat log** | A recorded blow-by-blow of the encounter |
-| **Skill timeline** | Every skill cast plotted per player against the raid clock as a zoomable Gantt chart with the damage each cast dealt, plus a filterable list and CSV export |
 | **History** | The last 50 runs are kept and can be reopened and compared |
 | **Ping** | Live latency, measured from the game's own heartbeat exchange |
 | **Faster loading** | Cuts cold game startup from ~95s to ~38s — see [Load-time optimisations](#load-time-optimisations) |
-| **QoL Keybinds** | Adds keybinds to restart/exit mazes quicker than in-game |
+| **Maze hotkeys** | Restart or leave a maze from a key of your choice |
 | **Localised** | English, 日本語, 한국어, 繁體中文 |
 
 ---
@@ -43,7 +43,7 @@ SoulMeter reads the game's network traffic and turns it into a live picture of y
 > [!IMPORTANT]
 > **No external loader is needed.** Earlier releases required a separate injector — this one injects itself.
 
-1. Grab a release (or [build it yourself](#building-from-source)).
+1. Grab a [release](https://github.com/TyrantRey/SoulMeter-1/releases/latest) (or [build it yourself](#building-from-source)).
 2. Keep the folder layout intact:
    ```
    SoulMeter.exe
@@ -59,17 +59,19 @@ The meter waits for the game process, injects automatically the moment it appear
 
 ### Hotkeys
 
-| Keys | Action |
+| Action | Default |
 |---|---|
-| `Ctrl` + `End` | Show / hide the overlay |
-| `Ctrl` + `Del` | Reset the current run |
+| Reset the current run | `Ctrl` + `Del` |
+| Restart maze | not set |
+| Leave maze | not set |
 
-Both are rebindable in `option.xml` using [DirectInput key codes](https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ee418641(v=vs.85)).
+Rebind them under **Options → Hotkey**: click a binding, press up to three keys, and it is saved when you release them. The maze actions send real commands to the game and are refused in town, like the in-game versions.
 
 ### Tips
 
 - **Right-click the title bar** for the full feature menu.
 - **Left-click a character's row** to open their detailed breakdown.
+- In the skill timeline, `Ctrl` + wheel zooms the time axis, dragging pans it, and a double-click (or **Fit**) shows the whole run again.
 - Non-Latin text not rendering? Drop a font covering your language into `Font/` and pick it in the Font Selector.
 - User settings live in `option.xml` and `imgui.ini`; saved history in `SoulMeter.dat`.
 
@@ -90,6 +92,9 @@ SoulMeter.exe                              SoulWorker (game process)
 ```
 
 The hook attaches to the client's own serialiser and deserialiser rather than to `ws2_32`. That matters: the client is an IOCP application issuing overlapped `WSARecv`, so socket-level hooks never observe a single byte. Hooking the game's own functions also means the client has already reassembled the TCP stream and decrypted the packet body by the time we see it — so frames arrive complete, in order, and exactly once, with no reassembly on our side to fall out of sync.
+
+> [!NOTE]
+> The hook finds those functions at runtime by signature-scanning `SoulWorker64.dll`, so a game patch that merely moves them needs no changes here. The scan fails closed — if the signature is missing or matches more than once, the hook never attaches rather than detouring the wrong code. If that happens, `kSerializeSig` in `SoulMeterHook/sockethooks.cpp` needs re-extracting.
 
 **Built with** ImGui + ImPlot on DirectX 11 · SQLite for game data · FlatBuffers for history · MinHook for the detours · nlohmann/json for i18n · tinyxml2 for settings.
 
@@ -116,27 +121,26 @@ Hashes are cached in `swmd5cache.txt` next to the game executable, or in `%LOCAL
 
 ## Building from source
 
-Requires **Visual Studio 2022** (v143 toolset, C++20).
+Requires **Visual Studio 2022** or newer with the **v143** toolset (C++20).
 
 ```bash
 MSBuild "Soulworker Utility.sln" -m -p:Configuration=Release -p:Platform=x64
 ```
 
-Output lands in `x64\Release\`. The solution builds two projects — `Soulworker Utility` (the meter) and `SoulMeterHook` (the injected DLL) — and copies `Lang\*.json` into the output folder automatically.
+The solution builds `Soulworker Utility` (the meter) and `SoulMeterHook` (the injected DLL). A Release build leaves you with:
 
-A Release build also stages a ready-to-ship copy in `x64\Release\package\` and zips it as `x64\Release\SoulMeter-<version>.zip` (the version comes from `Soulworker Utility\SWConfig.h`). The zip holds the meter, the hook DLL, `sqlite3.dll`, `SWDB.db`, `Lang\` and `Font\`. Fonts are not tracked in git — drop the `.ttf` you want to ship into `Soulworker Utility\Font\` before building, otherwise the build warns and the package goes out without one.
+- `x64\Release\` — the binaries, with `Lang\` copied alongside.
+- `x64\Release\SoulMeter-<version>.zip` — a ready-to-ship package (meter, hook DLL, `sqlite3.dll`, `SWDB.db`, `Lang\`, `Font\`), staged from `x64\Release\package\`. The version is read from `Soulworker Utility\SWConfig.h`.
+
+Fonts are not tracked in git. Drop the `.ttf` you want to ship into `Soulworker Utility\Font\` before building; without one the build warns and packages without a font.
 
 ### Continuous builds and releases
 
-[`.github/workflows/build.yml`](.github/workflows/build.yml) runs the same build on GitHub Actions:
+[`build.yml`](.github/workflows/build.yml) runs the same build on GitHub Actions:
 
-- **Every push and pull request** builds Release x64 and keeps `SoulMeter-<version>.zip` as a workflow artifact.
-- **Pushing to `main`** publishes a GitHub Release `v<version>` — tag, auto-generated notes and the zip — whenever `SWConfig.h` carries a version that has not been released yet. Bumping the version there is the whole release process; an already-released version is left untouched.
-- A hand-made tag `vX.Y.Z.W` is released the same way, and must match `SWConfig.h`.
-- To ship a font from CI, set the repository variable `SOULMETER_FONT_URL` (Settings → Secrets and variables → Actions → Variables) to a direct download link, or commit a `.ttf` under `Soulworker Utility\Font\`.
-
-> [!NOTE]
-> The hook locates the game's packet functions at runtime by signature-scanning `SoulWorker64.dll`, so a game patch that merely moves them needs no changes here. The scan fails closed — if the signature is missing or matches more than once, the hook simply never attaches rather than detouring the wrong code. If that happens, `kSerializeSig` in `SoulMeterHook/sockethooks.cpp` needs re-extracting.
+- **Every push and pull request** builds Release x64 and keeps the zip as a workflow artifact.
+- **Pushing to `main`** publishes a GitHub Release `v<version>` — tag, generated notes and the zip — whenever `SWConfig.h` carries a version that has not been released yet. Bumping that version is the whole release process; an already-released version is left untouched. A hand-made `vX.Y.Z.W` tag is released the same way and must match `SWConfig.h`.
+- To ship a font from CI, set the repository variable `SOULMETER_FONT_URL` to a direct download link, or commit a `.ttf` under `Soulworker Utility\Font\`.
 
 ---
 
@@ -148,5 +152,6 @@ This project stands on the work of the people who built and maintained SoulMeter
 |---|---|
 | **[FeAr](https://github.com/fearek/DPSMeter/)** | `fearek/DPSMeter` — the Global-server meter this repository continues from |
 | **[AFNGP](https://github.com/AFNGP/SoulMeter)** | `AFNGP/SoulMeter` — long-running maintenance and feature work |
+| **[0xarray](https://github.com/0xarray/SoulMeter)** | `0xarray/SoulMeter` — the in-process hook, load-time work and the base this fork builds on |
 
 Original project by **Park3740**. Special thanks to **@Nyanchii** and **@ga0321**.
