@@ -6,7 +6,7 @@ class MemoryPool : public MultiThreadSync<T>
 public:
     static void* operator new(std::size_t allocLength)
     {
-        MultiThreadSync<T>::template ThreadSync Sync;
+        typename MultiThreadSync<T>::ThreadSync Sync;
 
         if (!mFreePointer)
             allocBlock();
@@ -19,7 +19,7 @@ public:
 
     static void operator delete(void* deletePointer)
     {
-        MultiThreadSync<T>::template ThreadSync Sync;
+        typename MultiThreadSync<T>::ThreadSync Sync;
 
         *reinterpret_cast<unsigned char**>(deletePointer) = mFreePointer;
 

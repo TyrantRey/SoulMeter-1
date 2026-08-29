@@ -1,8 +1,8 @@
 #include "pch.h"
-#include ".\Damage Meter\History.h"
-#include ".\Damage Meter\Damage Meter.h"
-#include ".\Damage Meter\SaveData.h"
-#include ".\UI\UiWindow.h"
+#include "Damage Meter/History.h"
+#include "Damage Meter/Damage Meter.h"
+#include "Damage Meter/SaveData.h"
+#include "UI/UiWindow.h"
 
 void _HISTORYINFO::Setup(HISTORY_DATA* historyData, uint32_t worldID, uint64_t time, uint32_t myID, bool isSaveData, SYSTEMTIME* saveTime, uint32_t realClearTime) {
 	_historyData = historyData;

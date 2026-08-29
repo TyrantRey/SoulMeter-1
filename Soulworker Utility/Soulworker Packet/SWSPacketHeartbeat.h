@@ -1,6 +1,6 @@
 #pragma once
 
-#include ".\Damage Meter\Damage Meter.h"
+#include "Damage Meter/Damage Meter.h"
 
 #pragma pack(push, 1)
 

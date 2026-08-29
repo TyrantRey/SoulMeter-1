@@ -1,11 +1,11 @@
 #include "pch.h"
 #include "SkillTimeline.h"
 
-#include ".\Combat Meter\Combat.h"
-#include ".\Combat Meter\CombatMeter.h"
-#include ".\Damage Meter\Damage Meter.h"
-#include ".\Damage Meter\MySQLite.h"
-#include ".\UI\Option.h"
+#include "Combat Meter/Combat.h"
+#include "Combat Meter/CombatMeter.h"
+#include "Damage Meter/Damage Meter.h"
+#include "Damage Meter/MySQLite.h"
+#include "UI/Option.h"
 
 #include <algorithm>
 #include <filesystem>

@@ -1,13 +1,13 @@
 ﻿#pragma once
 #include "pch.h"
 
-#include ".\Damage Meter\Timer.h"
-#include ".\Damage Meter\SWDamagePlayer.h"
-#include ".\UI\PlotWindow.h"
-#include ".\Damage Meter\MonsterList.h"
-#include ".\UI\Option.h"
+#include "Damage Meter/Timer.h"
+#include "Damage Meter/SWDamagePlayer.h"
+#include "UI/PlotWindow.h"
+#include "Damage Meter/MonsterList.h"
+#include "UI/Option.h"
 #include <unordered_map>
-#include ".\Third Party\FlatBuffers\include\SW_HISTORY_.h"
+#include "Third Party/FlatBuffers/include/SW_HISTORY_.h"
 #include "SimpleIni.h"
 using namespace SoulMeterFBS::History;
 

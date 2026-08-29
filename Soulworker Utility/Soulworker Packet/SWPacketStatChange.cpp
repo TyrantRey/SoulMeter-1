@@ -1,9 +1,9 @@
 #include "pch.h"
-#include ".\Soulworker Packet\SWPacket.h"
-#include ".\Soulworker Packet\SWPacketStatChange.h"
-#include ".\Damage Meter\Damage Meter.h"
-#include ".\Combat Meter\Combat.h"
-#include ".\Combat Meter\CombatMeter.h"
+#include "Soulworker Packet/SWPacket.h"
+#include "Soulworker Packet/SWPacketStatChange.h"
+#include "Damage Meter/Damage Meter.h"
+#include "Combat Meter/Combat.h"
+#include "Combat Meter/CombatMeter.h"
 
 SWPacketStatChange::SWPacketStatChange(SWHEADER* swheader, BYTE* data) : SWPacket(swheader, data) {
 

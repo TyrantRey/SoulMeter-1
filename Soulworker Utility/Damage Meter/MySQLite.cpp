@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include ".\Damage Meter\MySQLite.h"
+#include "Damage Meter/MySQLite.h"
 
 MySQL::MySQL() : _db(nullptr), _memdb(nullptr) {
 

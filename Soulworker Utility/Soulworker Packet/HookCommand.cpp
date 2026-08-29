@@ -1,7 +1,7 @@
 #include "pch.h"
-#include ".\Soulworker Packet\HookCommand.h"
-#include ".\Damage Meter\Damage Meter.h"
-#include ".\Util\Log.h"
+#include "Soulworker Packet/HookCommand.h"
+#include "Damage Meter/Damage Meter.h"
+#include "Util/Log.h"
 #include <sddl.h>
 
 #pragma comment(lib, "advapi32.lib")

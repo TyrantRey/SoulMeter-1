@@ -1,5 +1,5 @@
 #include "pch.h"
-#include ".\UI\DX Input.h"
+#include "UI/DX Input.h"
 
 
 bool DXInput::Init(HINSTANCE hinst, HWND hWnd) {

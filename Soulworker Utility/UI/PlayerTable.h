@@ -1,5 +1,5 @@
 #pragma once
-#include ".\UI\SpecificInfomation.h"
+#include "UI/SpecificInfomation.h"
 
 typedef struct _SELECTED_PLAYER {
 	

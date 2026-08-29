@@ -1,7 +1,7 @@
 #pragma once
 #include "pch.h"
-#include ".\Buff Meter\Buff.h"
-#include ".\FlatBuffers\include\SW_HISTORY_.h"
+#include "Buff Meter/Buff.h"
+#include "FlatBuffers/include/SW_HISTORY_.h"
 
 using namespace SoulMeterFBS::History;
 

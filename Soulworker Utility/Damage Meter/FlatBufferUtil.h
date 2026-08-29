@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <unordered_map>
-#include ".\FlatBuffers\include\STRUCT_.h"
+#include "FlatBuffers/include/STRUCT_.h"
 
 #define FLATBUFFERUTIL FlatBufferUtil::getInstance()
 

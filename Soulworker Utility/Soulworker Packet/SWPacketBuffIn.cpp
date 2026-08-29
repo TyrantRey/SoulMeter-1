@@ -1,9 +1,9 @@
 #include "pch.h"
-#include ".\Soulworker Packet\SWPacketBuffIn.h"
-#include ".\Buff Meter\Buff Meter.h"
-#include ".\Damage Meter\Damage Meter.h"
-#include ".\UI\PlotWindow.h"
-#include ".\Combat Meter\CombatMeter.h"
+#include "Soulworker Packet/SWPacketBuffIn.h"
+#include "Buff Meter/Buff Meter.h"
+#include "Damage Meter/Damage Meter.h"
+#include "UI/PlotWindow.h"
+#include "Combat Meter/CombatMeter.h"
 
 SWPacketBuffIn::SWPacketBuffIn(SWHEADER* swheader, BYTE* data) : SWPacket(swheader, data) {
 

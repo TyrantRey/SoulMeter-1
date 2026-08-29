@@ -1,5 +1,20 @@
 #include "pch.h"
-#include ".\Damage Meter\SaveData.h"
+#include "Damage Meter/SaveData.h"
+
+// MSVC's fstream::open takes a third, sharing argument; _SH_DENYRW keeps other
+// processes out of the save file while it is open. Other standard libraries
+// have no equivalent, so the cross build opens the file without a share lock.
+namespace {
+template <class Stream>
+void OpenDenyShare(Stream& stream, const std::string& path, std::ios_base::openmode mode)
+{
+#ifdef _MSC_VER
+	stream.open(path, mode, _SH_DENYRW);
+#else
+	stream.open(path, mode);
+#endif
+}
+}
 
 SWSaveData::~SWSaveData()
 {
@@ -31,12 +46,12 @@ DWORD SWSaveData::Init(std::string fileName)
 		// Open save data, set deny read/write
 		while (TRUE)
 		{
-			_saveFile.open(_saveFileName, std::ios::in | std::ios::out | std::ios::binary, _SH_DENYRW);
+			OpenDenyShare(_saveFile, _saveFileName, std::ios::in | std::ios::out | std::ios::binary);
 			if (!_saveFile.is_open())
 			{
 				_saveFile.close();
 
-				_saveFile.open(_saveFileName, std::ios::out, _SH_DENYRW);
+				OpenDenyShare(_saveFile, _saveFileName, std::ios::out);
 				if (!_saveFile)
 				{
 					error = ERROR_FILE_SYSTEM_LIMITATION;
@@ -170,7 +185,7 @@ void SWSaveData::Save(flatbuffers::FlatBufferBuilder& fbb)
 
 				// open tmp file
 				std::fstream tmpFile;
-				tmpFile.open(tmpFileName, std::ios::in | std::ios::out | std::ios::binary, _SH_DENYRW);
+				OpenDenyShare(tmpFile, tmpFileName, std::ios::in | std::ios::out | std::ios::binary);
 				if (!tmpFile.is_open())
 				{
 					LogInstance.WriteLog("[SWSaveData::Save] open tmp file failed");
@@ -238,7 +253,7 @@ void SWSaveData::Delete(LONG64 index, LONG64 clearCount)
 			std::remove(tmpFileName.c_str());
 
 			std::fstream tmpFile;
-			tmpFile.open(tmpFileName, std::ios::out | std::ios::binary, _SH_DENYRW);
+			OpenDenyShare(tmpFile, tmpFileName, std::ios::out | std::ios::binary);
 			if (!tmpFile.is_open())
 			{
 				LogInstance.WriteLog("[SWSaveData::Save] open tmp file failed");

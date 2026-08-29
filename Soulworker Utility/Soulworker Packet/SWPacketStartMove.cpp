@@ -1,7 +1,7 @@
 #include "pch.h"
-#include ".\Soulworker Packet\SWPacket.h"
-#include ".\Damage Meter\Damage Meter.h"
-#include ".\Soulworker Packet\SWPacketStartMove.h"
+#include "Soulworker Packet/SWPacket.h"
+#include "Damage Meter/Damage Meter.h"
+#include "Soulworker Packet/SWPacketStartMove.h"
 
 SWPacketStartMove::SWPacketStartMove(SWHEADER* swheader, BYTE* data) {
 	_swheader = swheader;

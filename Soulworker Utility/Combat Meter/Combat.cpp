@@ -1,5 +1,5 @@
 #include "pch.h"
-#include ".\Combat Meter\Combat.h"
+#include "Combat Meter/Combat.h"
 
 void Combat::Insert(CombatLog* cl)
 {

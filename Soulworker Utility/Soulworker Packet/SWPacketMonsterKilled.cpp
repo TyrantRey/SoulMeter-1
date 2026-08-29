@@ -1,7 +1,7 @@
 #include "pch.h"
-#include ".\Soulworker Packet\SWPacketMonsterKilled.h"
-#include ".\Damage Meter\Damage Meter.h"
-#include ".\Combat Meter\CombatMeter.h"
+#include "Soulworker Packet/SWPacketMonsterKilled.h"
+#include "Damage Meter/Damage Meter.h"
+#include "Combat Meter/CombatMeter.h"
 
 SWPacketMonsterKilled::SWPacketMonsterKilled(SWHEADER* swheader, BYTE* data) : SWPacket(swheader, data) {
 

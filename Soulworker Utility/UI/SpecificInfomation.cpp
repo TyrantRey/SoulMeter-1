@@ -1,10 +1,10 @@
 ﻿#include "pch.h"
-#include ".\UI\SpecificInfomation.h"
-#include ".\UI\Option.h"
-#include ".\Damage Meter\Damage Meter.h"
-#include ".\Buff Meter\Buff Meter.h"
-#include ".\UI\UiWindow.h"
-#include ".\Damage Meter\MySQLite.h"
+#include "UI/SpecificInfomation.h"
+#include "UI/Option.h"
+#include "Damage Meter/Damage Meter.h"
+#include "Buff Meter/Buff Meter.h"
+#include "UI/UiWindow.h"
+#include "Damage Meter/MySQLite.h"
 
 
 SpecificInformation::SpecificInformation(uint32_t playerID) : _playerID(playerID), _monsterID_SKILL(0), _globalFontScale(0), _columnFontScale(0), _tableFontScale(0), _tableTime(0), _accumulatedTime(0) {

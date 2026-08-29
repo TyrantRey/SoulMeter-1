@@ -1,13 +1,13 @@
 #include "pch.h"
-#include ".\Damage Meter\Timer.h"
-#include ".\Damage Meter\SWDamagePlayer.h"
-#include ".\Damage Meter\Damage Meter.h"
-#include ".\UI\PlotWindow.h"
-#include ".\Damage Meter\History.h"
-#include ".\Damage Meter\MySQLite.h"
-#include ".\Combat Meter\CombatMeter.h"
-#include ".\UI\UtillWindow.h"
-#include ".\Damage Meter\MapList.h"
+#include "Damage Meter/Timer.h"
+#include "Damage Meter/SWDamagePlayer.h"
+#include "Damage Meter/Damage Meter.h"
+#include "UI/PlotWindow.h"
+#include "Damage Meter/History.h"
+#include "Damage Meter/MySQLite.h"
+#include "Combat Meter/CombatMeter.h"
+#include "UI/UtillWindow.h"
+#include "Damage Meter/MapList.h"
 
 SWDamageMeter::~SWDamageMeter() {
 

@@ -1,13 +1,13 @@
 #include "pch.h"
 #include <stdio.h>
 #include <filesystem>
-#include ".\UI\Option.h"
-#include ".\UI\HotKey.h"
-#include ".\UI\PlayerTable.h"
-#include ".\UI\UiWindow.h"
-#include ".\Damage Meter\Damage Meter.h"
-#include ".\Buff Meter\Buff Meter.h"
-#include ".\Damage Meter\MySQLite.h"
+#include "UI/Option.h"
+#include "UI/HotKey.h"
+#include "UI/PlayerTable.h"
+#include "UI/UiWindow.h"
+#include "Damage Meter/Damage Meter.h"
+#include "Buff Meter/Buff Meter.h"
+#include "Damage Meter/MySQLite.h"
 #include "SWConfig.h"
 #include <shellapi.h>
 #pragma comment(lib, "shell32.lib")

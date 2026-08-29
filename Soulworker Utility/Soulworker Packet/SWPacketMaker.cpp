@@ -1,11 +1,11 @@
 #include "pch.h"
-#include ".\Soulworker Packet\PacketType.h"
-#include ".\Soulworker Packet\SWPacketMaker.h"
-#include ".\Soulworker Packet\SWCPacket.h"
-#include ".\Soulworker Packet\PipeReceiver.h"
-#include ".\Soulworker Packet\Injector.h"
-#include ".\Soulworker Packet\HookCommand.h"
-#include ".\UI\PlayerTable.h"
+#include "Soulworker Packet/PacketType.h"
+#include "Soulworker Packet/SWPacketMaker.h"
+#include "Soulworker Packet/SWCPacket.h"
+#include "Soulworker Packet/PipeReceiver.h"
+#include "Soulworker Packet/Injector.h"
+#include "Soulworker Packet/HookCommand.h"
+#include "UI/PlayerTable.h"
 #include "SWConfig.h"
 
 SWHEADER* SWPacketMaker::GetSWHeader(std::vector<unsigned char>& packet) {

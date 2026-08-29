@@ -1,5 +1,5 @@
 #pragma once
-#include ".\Soulworker Packet\SWPacket.h"
+#include "Soulworker Packet/SWPacket.h"
 
 class SWPacketMazeStart : public SWPacket {
 protected:

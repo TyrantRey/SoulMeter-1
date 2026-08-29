@@ -1,10 +1,10 @@
 #include "pch.h"
-#include ".\Soulworker Packet\SWPacket.h"
-#include ".\Damage Meter\Damage Meter.h"
-#include ".\Damage Meter\MySQLite.h"
-#include ".\Soulworker Packet\SWPacketOtherUseSkill.h"
-#include ".\UI\UtillWindow.h"
-#include ".\Combat Meter\CombatMeter.h"
+#include "Soulworker Packet/SWPacket.h"
+#include "Damage Meter/Damage Meter.h"
+#include "Damage Meter/MySQLite.h"
+#include "Soulworker Packet/SWPacketOtherUseSkill.h"
+#include "UI/UtillWindow.h"
+#include "Combat Meter/CombatMeter.h"
 
 SWPacketOtherUseSkill::SWPacketOtherUseSkill(SWHEADER* swheader, BYTE* data) : SWPacket(swheader, data) {
 

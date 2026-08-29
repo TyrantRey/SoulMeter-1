@@ -1,76 +1,76 @@
 #pragma once
 
-#include ".\Soulworker Packet\SWPacket.h"
+#include "Soulworker Packet/SWPacket.h"
 /* 0x01 */
-#include ".\Soulworker Packet\SWPacketHeartbeat.h"
+#include "Soulworker Packet/SWPacketHeartbeat.h"
 
 /* 0x03 */
-#include ".\Soulworker Packet\SWPacketStatChange.h"
-#include ".\Soulworker Packet\SWPacketDead.h"
-#include ".\Soulworker Packet\SWPacketcharacterUpdateSpecialOptionList.h"
+#include "Soulworker Packet/SWPacketStatChange.h"
+#include "Soulworker Packet/SWPacketDead.h"
+#include "Soulworker Packet/SWPacketCharacterUpdateSpecialOptionList.h"
 
 /* 0x04 */
-#include ".\Soulworker Packet\SWPacketWorldChange.h"
-#include ".\Soulworker Packet\SWPacketMazeStart.h"
-#include ".\Soulworker Packet\SWPacketSpawnedcharInfo.h"
-#include ".\Soulworker Packet\SWPacketInInfoMonster.h"
-#include ".\Soulworker Packet\SWPacketOtherInfosMonster.h"
+#include "Soulworker Packet/SWPacketWorldChange.h"
+#include "Soulworker Packet/SWPacketMazeStart.h"
+#include "Soulworker Packet/SWPacketSpawnedCharInfo.h"
+#include "Soulworker Packet/SWPacketInInfoMonster.h"
+#include "Soulworker Packet/SWPacketOtherInfosMonster.h"
 
 /* 0x05 */
-#include ".\Soulworker Packet\SWPacketStartMove.h"
+#include "Soulworker Packet/SWPacketStartMove.h"
 // stopMove
 // jump
 // cancelwithmove
-#include ".\Soulworker Packet\SWPacketEnterAnimation.h"
+#include "Soulworker Packet/SWPacketEnterAnimation.h"
 
 /* 0x06 */
 // DODGE
-#include ".\Soulworker Packet\SWPacketUseSkill.h"
-#include ".\Soulworker Packet\SWPacketOtherUseSkill.h"
-#include ".\Soulworker Packet\SWPacketDamage.h"
-#include ".\Soulworker Packet\SWPacketBuffIn.h"
-#include ".\Soulworker Packet\SWPacketBuffOut.h"
+#include "Soulworker Packet/SWPacketUseSkill.h"
+#include "Soulworker Packet/SWPacketOtherUseSkill.h"
+#include "Soulworker Packet/SWPacketDamage.h"
+#include "Soulworker Packet/SWPacketBuffIn.h"
+#include "Soulworker Packet/SWPacketBuffOut.h"
 // projectile
-#include ".\Soulworker Packet\SWPacketAkasic.h"
-#include ".\Soulworker Packet\SWPacketCooldown.h"
+#include "Soulworker Packet/SWPacketAkasic.h"
+#include "Soulworker Packet/SWPacketCooldown.h"
 
 
 /* 0x07 */
-#include ".\Soulworker Packet\SWPacketChat.h"
+#include "Soulworker Packet/SWPacketChat.h"
 // chat_whisper
 
 /* 0x0864*/
-#include ".\Soulworker Packet\SWPacketBrooch.h"
+#include "Soulworker Packet/SWPacketBrooch.h"
 
 /* 0x11 Maze */
-#include ".\Soulworker Packet\SWPacketMazeEnd.h"
-#include ".\Soulworker Packet\SWPacketMazeUpdateState.h"
+#include "Soulworker Packet/SWPacketMazeEnd.h"
+#include "Soulworker Packet/SWPacketMazeUpdateState.h"
 
 /* 0x12 */
-#include ".\Soulworker Packet\SWPacketParty.h"
-#include ".\Soulworker Packet\SWPacketPartyListInfo.h"
+#include "Soulworker Packet/SWPacketParty.h"
+#include "Soulworker Packet/SWPacketPartyListInfo.h"
 
 /* 0x17 Monster */
-#include ".\Soulworker Packet\SWPacketMonsterStatUpdate.h"
-#include ".\Soulworker Packet\SWPacketMonsterKilled.h"
-#include ".\Soulworker Packet\SWPacketAggroChanged.h"
+#include "Soulworker Packet/SWPacketMonsterStatUpdate.h"
+#include "Soulworker Packet/SWPacketMonsterKilled.h"
+#include "Soulworker Packet/SWPacketAggroChanged.h"
 
 /* 0x23 Gesture */
-#include ".\Soulworker Packet\SWPacketGestureUsed.h"
+#include "Soulworker Packet/SWPacketGestureUsed.h"
 
 /* 0x2e */
-#include ".\Soulworker Packet\SWPacketBigParty.h"
+#include "Soulworker Packet/SWPacketBigParty.h"
 
 /* VP */
-#include ".\Soulworker Packet\SWPacketSquad.h"
+#include "Soulworker Packet/SWPacketSquad.h"
 
 // SWSPacket
-#include ".\Soulworker Packet\SWSPacketMySkillUsed.h"
-#include ".\Soulworker Packet\SWSPacketMyDodgeUsed.h"
+#include "Soulworker Packet/SWSPacketMySkillUsed.h"
+#include "Soulworker Packet/SWSPacketMyDodgeUsed.h"
 
 // SWCustom
-#include ".\Soulworker Packet\SWCPing.h"
-#include ".\Soulworker Packet\SWCPresence.h"
+#include "Soulworker Packet/SWCPing.h"
+#include "Soulworker Packet/SWCPresence.h"
 
 
 // opcode0106: 01=mainCMD, 06=subCMD

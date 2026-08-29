@@ -1,8 +1,8 @@
 #include "pch.h"
-#include ".\Combat Meter\Combat.h"
-#include ".\Combat Meter\CombatMeter.h"
-#include ".\Damage Meter\MySQLite.h"
-#include ".\Damage Meter\Damage Meter.h"
+#include "Combat Meter/Combat.h"
+#include "Combat Meter/CombatMeter.h"
+#include "Damage Meter/MySQLite.h"
+#include "Damage Meter/Damage Meter.h"
 
 void CombatMeter::Insert(uint32_t id, CombatType type, CombatLog* cl)
 {

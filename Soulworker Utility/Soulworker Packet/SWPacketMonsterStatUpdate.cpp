@@ -1,10 +1,10 @@
 #include "pch.h"
-#include ".\Soulworker Packet\SWPacketMonsterStatUpdate.h"
-#include ".\Damage Meter\Damage Meter.h"
-#include ".\PacketInfo.h"
-#include ".\Damage Meter\MySQLite.h"
-#include ".\UI\PlayerTable.h"
-#include ".\Combat Meter\CombatMeter.h"
+#include "Soulworker Packet/SWPacketMonsterStatUpdate.h"
+#include "Damage Meter/Damage Meter.h"
+#include "PacketInfo.h"
+#include "Damage Meter/MySQLite.h"
+#include "UI/PlayerTable.h"
+#include "Combat Meter/CombatMeter.h"
 
 SWPacketMonsterStatUpdate::SWPacketMonsterStatUpdate(SWHEADER* swheader, BYTE* data) : SWPacket(swheader, data) {
 

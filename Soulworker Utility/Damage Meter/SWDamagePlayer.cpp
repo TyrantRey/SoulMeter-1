@@ -1,10 +1,10 @@
 ﻿#include "pch.h"
-#include ".\Damage Meter\SWDamageMonster.h"
-#include ".\Damage Meter\SWDamagePlayer.h"
-#include ".\Damage Meter\Damage Meter.h"
-#include ".\Soulworker Packet\PacketInfo.h"
-#include ".\MySQLite.h"
-#include ".\UI\Option.h"
+#include "Damage Meter/SWDamageMonster.h"
+#include "Damage Meter/SWDamagePlayer.h"
+#include "Damage Meter/Damage Meter.h"
+#include "Soulworker Packet/PacketInfo.h"
+#include "MySQLite.h"
+#include "UI/Option.h"
 
 SWDamagePlayer::SWDamagePlayer(uint32_t id, uint64_t totalDMG, uint64_t soulstoneDMG, SWPACKETDAMAGE_DAMAGETYPE damageType, unsigned short maxCombo, uint32_t monsterID, uint32_t skillID) {
 	_id = id;

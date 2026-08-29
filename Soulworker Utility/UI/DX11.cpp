@@ -1,7 +1,7 @@
 #include "pch.h"
-#include ".\UI\DX11.h"
+#include "UI/DX11.h"
 #define STB_IMAGE_IMPLEMENTATION
-#include ".\UI\stb_image.h"
+#include "UI/stb_image.h"
 
 DX11::DX11() : _4xMsaaQuality(0), _enable4xMsaa(FALSE), _d3dDevice(nullptr), _d3dDeviceContext(nullptr) {
 

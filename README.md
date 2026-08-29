@@ -134,11 +134,26 @@ The solution builds `Soulworker Utility` (the meter) and `SoulMeterHook` (the in
 
 Fonts are not tracked in git. Drop the `.ttf` you want to ship into `Soulworker Utility\Font\` before building; without one the build warns and packages without a font.
 
+### Building on Linux
+
+The Windows binaries can also be cross-compiled from Linux (or macOS) with [llvm-mingw](https://github.com/mstorsjo/llvm-mingw) and CMake. Clang is required rather than GCC-mingw — the hook DLL uses `__try`/`__except`, which only clang implements for mingw targets.
+
+```bash
+# once: llvm-mingw on PATH (any recent release; CI pins 20260826)
+curl -sSL https://github.com/mstorsjo/llvm-mingw/releases/download/20260826/llvm-mingw-20260826-ucrt-ubuntu-22.04-x86_64.tar.xz | tar xJ
+export PATH="$PWD/llvm-mingw-20260826-ucrt-ubuntu-22.04-x86_64/bin:$PATH"
+
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-llvm-mingw.cmake
+cmake --build build --target dist
+```
+
+`dist` leaves the same package as the MSBuild release in `build/package/` and `build/SoulMeter-<version>.zip`. The binaries are linked statically against libc++, so they need nothing beyond what the MSVC build needs. Two things differ from the MSVC build: the source lists live in `CMakeLists.txt` and must be kept in sync with the `.vcxproj` files when files are added, and the save file is opened without MSVC's `_SH_DENYRW` share lock (other standard libraries have no equivalent; the single-instance mutex already keeps a second meter out).
+
 ### Continuous builds and releases
 
 [`build.yml`](.github/workflows/build.yml) runs the same build on GitHub Actions:
 
-- **Every push and pull request** builds Release x64 and keeps the zip as a workflow artifact.
+- **Every push and pull request** builds Release x64 and keeps the zip as a workflow artifact. A second job cross-compiles the same package on Ubuntu with llvm-mingw (artifact `SoulMeter-<version>-mingw`) as a build check; releases come from the MSVC build.
 - **Pushing to `main`** publishes a GitHub Release `v<version>` — tag, generated notes and the zip — whenever `SWConfig.h` carries a version that has not been released yet. Bumping that version is the whole release process; an already-released version is left untouched. A hand-made `vX.Y.Z.W` tag is released the same way and must match `SWConfig.h`.
 - To ship a font from CI, set the repository variable `SOULMETER_FONT_URL` to a direct download link, or commit a `.ttf` under `Soulworker Utility\Font\`.
 

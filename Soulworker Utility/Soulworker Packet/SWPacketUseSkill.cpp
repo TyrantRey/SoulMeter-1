@@ -1,7 +1,7 @@
 #include "pch.h"
-#include ".\Soulworker Packet\SWPacket.h"
-#include ".\Damage Meter\Damage Meter.h"
-#include ".\Soulworker Packet\SWPacketUseSkill.h"
+#include "Soulworker Packet/SWPacket.h"
+#include "Damage Meter/Damage Meter.h"
+#include "Soulworker Packet/SWPacketUseSkill.h"
 
 SWPacketUseSkill::SWPacketUseSkill(SWHEADER* swheader, BYTE* data) : SWPacket(swheader, data) {
 

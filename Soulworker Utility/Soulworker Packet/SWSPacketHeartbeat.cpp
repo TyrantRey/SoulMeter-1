@@ -1,7 +1,7 @@
 #include "pch.h"
-#include ".\Soulworker Packet\SWSPacketHeartbeat.h"
-#include ".\Damage Meter\Damage Meter.h"
-#include ".\UI\PlayerTable.h"
+#include "Soulworker Packet/SWSPacketHeartbeat.h"
+#include "Damage Meter/Damage Meter.h"
+#include "UI/PlayerTable.h"
 
 SWSPacketHeartbeat::SWSPacketHeartbeat(SWSHEADER* swheader, BYTE* data, uint64_t ts) {
 	_swheader = swheader;

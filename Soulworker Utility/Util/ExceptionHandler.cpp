@@ -1,5 +1,5 @@
 #include "pch.h"
-#include ".\Util\ExceptionHandler.h"
+#include "Util/ExceptionHandler.h"
 
 typedef bool(WINAPI* MINIDUMPWRITEDUMP)( // Callback 
     HANDLE hProcess,

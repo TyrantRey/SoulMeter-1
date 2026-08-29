@@ -1,6 +1,6 @@
 #include "pch.h"
-#include ".\Buff Meter\Buff.h"
-#include ".\Buff Meter\Buff Meter.h"
+#include "Buff Meter/Buff.h"
+#include "Buff Meter/Buff Meter.h"
 
 _PLAYERBUFF::_PLAYERBUFF(uint32_t playerID, unsigned short buffid, BYTE stack) : _playerID(playerID) {
 	_buffInfo.push_back(new Buff(buffid, stack));

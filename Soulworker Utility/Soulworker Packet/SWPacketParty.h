@@ -1,7 +1,7 @@
 #pragma once
 
-#include ".\Soulworker Packet\SWPacket.h"
-#include ".\Damage Meter\Damage Meter.h"
+#include "Soulworker Packet/SWPacket.h"
+#include "Damage Meter/Damage Meter.h"
 
 #define SWPACKETPARTY_DUMMY 46 //1117
 

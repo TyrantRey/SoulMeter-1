@@ -1,5 +1,5 @@
 #include "pch.h"
-#include ".\Soulworker Packet\SWCPacket.h"
+#include "Soulworker Packet/SWCPacket.h"
 SWCPacket::SWCPacket(SWCHEADER* swheader, uint8_t* data) {
 	_swheader = swheader;
 	_data = data;

@@ -1,6 +1,6 @@
 #pragma once
 #include "pch.h"
-#include ".\FlatBuffers\include\SW_HISTORY_.h"
+#include "FlatBuffers/include/SW_HISTORY_.h"
 
 using namespace SoulMeterFBS::History;
 

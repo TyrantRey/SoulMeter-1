@@ -1,10 +1,10 @@
 #include "pch.h"
-#include ".\Soulworker Packet\SWPacket.h"
-#include ".\Damage Meter\Damage Meter.h"
-#include ".\Soulworker Packet\SWPacketDamage.h"
-#include ".\PacketInfo.h"
-#include ".\Damage Meter\MySQLite.h"
-#include ".\Damage Meter\MapList.h"
+#include "Soulworker Packet/SWPacket.h"
+#include "Damage Meter/Damage Meter.h"
+#include "Soulworker Packet/SWPacketDamage.h"
+#include "PacketInfo.h"
+#include "Damage Meter/MySQLite.h"
+#include "Damage Meter/MapList.h"
 
 SWPacketDamage::SWPacketDamage(SWHEADER* swheader, BYTE* data) : SWPacket(swheader, data) {
 

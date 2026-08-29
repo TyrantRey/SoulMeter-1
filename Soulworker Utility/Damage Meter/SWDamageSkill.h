@@ -1,7 +1,7 @@
 #pragma once
 #include "pch.h"
-#include ".\Third Party\FlatBuffers\include\SW_HISTORY_.h"
-#include ".\Damage Meter\MySQLite.h"
+#include "Third Party/FlatBuffers/include/SW_HISTORY_.h"
+#include "Damage Meter/MySQLite.h"
 
 
 using namespace SoulMeterFBS::History;

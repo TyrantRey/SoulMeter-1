@@ -1,5 +1,5 @@
 #pragma once
-#include "Third Party\SQLite\include\sqlite3.h"
+#include "Third Party/SQLite/include/sqlite3.h"
 
 #define SWDB MySQL::getInstance()
 #define SWDBPATH "SWDB.db"
