@@ -1,8 +1,8 @@
 #include "pch.h"
-#include ".\Soulworker Packet\SWPacket.h"
-#include ".\Damage Meter\Damage Meter.h"
-#include ".\Soulworker Packet\SWPacketInInfoMonster.h"
-#include ".\Combat Meter\CombatMeter.h"
+#include "Soulworker Packet/SWPacket.h"
+#include "Damage Meter/Damage Meter.h"
+#include "Soulworker Packet/SWPacketInInfoMonster.h"
+#include "Combat Meter/CombatMeter.h"
 
 SWPacketInInfoMonster::SWPacketInInfoMonster(SWHEADER* swheader, BYTE* data) : SWPacket(swheader, data) {
 

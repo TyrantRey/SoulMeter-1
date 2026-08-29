@@ -1,9 +1,9 @@
 #include "pch.h"
 #include "HotKey.h"
-#include ".\UI\DX Input.h"
-#include ".\UI\PlayerTable.h"
-#include ".\Damage Meter\Damage Meter.h"
-#include ".\Soulworker Packet\HookCommand.h"
+#include "UI/DX Input.h"
+#include "UI/PlayerTable.h"
+#include "Damage Meter/Damage Meter.h"
+#include "Soulworker Packet/HookCommand.h"
 
 namespace {
 	struct KEYNAME {

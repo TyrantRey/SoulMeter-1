@@ -1,2 +1,2 @@
 #include "pch.h"
-#include ".\Util\CriticalSection.h"
+#include "Util/CriticalSection.h"

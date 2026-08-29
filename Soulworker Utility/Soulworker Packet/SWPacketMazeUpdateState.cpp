@@ -1,8 +1,8 @@
 #include "pch.h"
-#include ".\Soulworker Packet\SWPacketMazeUpdateState.h"
-#include ".\Damage Meter\Damage Meter.h"
-#include ".\UI\Option.h"
-#include ".\Damage Meter\MapList.h"
+#include "Soulworker Packet/SWPacketMazeUpdateState.h"
+#include "Damage Meter/Damage Meter.h"
+#include "UI/Option.h"
+#include "Damage Meter/MapList.h"
 
 SWPacketMazeUpdateState::SWPacketMazeUpdateState(SWHEADER* swheader, BYTE* data) : SWPacket(swheader, data) {
 

@@ -379,3 +379,6 @@ cc-whiletrue0x
 
 # MinHook prebuilt artifacts
 Soulworker Utility/Third Party/minhook/build/
+
+# CMake cross-build output (see README "Building on Linux")
+build/

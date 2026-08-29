@@ -1,7 +1,7 @@
 #include "pch.h"
-#include ".\Soulworker Packet\SWPacket.h"
-#include ".\Damage Meter\Damage Meter.h"
-#include ".\Soulworker Packet\SWPacketParty.h"
+#include "Soulworker Packet/SWPacket.h"
+#include "Damage Meter/Damage Meter.h"
+#include "Soulworker Packet/SWPacketParty.h"
 
 SWPacketParty::SWPacketParty(SWHEADER* swheader, BYTE* data) : SWPacket(swheader, data) {
 

@@ -1,10 +1,10 @@
 #include "pch.h"
-#include ".\Damage Meter/Damage Meter.h"
-#include ".\UI\UiWindow.h"
-#include ".\Damage Meter\MySQLite.h"
-#include ".\UI\PlayerTable.h"
-#include ".\Damage Meter\SaveData.h"
-#include ".\Soulworker Packet\SWPacketMaker.h"
+#include "Damage Meter/Damage Meter.h"
+#include "UI/UiWindow.h"
+#include "Damage Meter/MySQLite.h"
+#include "UI/PlayerTable.h"
+#include "Damage Meter/SaveData.h"
+#include "Soulworker Packet/SWPacketMaker.h"
 #include "SimpleIni.h"
 #if defined(DEBUG) || defined(_DEBUG)
 #pragma comment(linker, "/entry:WinMainCRTStartup /subsystem:console" )

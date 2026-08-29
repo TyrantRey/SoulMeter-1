@@ -1,12 +1,12 @@
 #pragma once
 #include "pch.h"
-#include ".\FlatBuffers\include\SW_HISTORY_.h"
-#include ".\Damage Meter\History.h"
-#include ".\Damage Meter\MySQLite.h"
-#include ".\Damage Meter\SaveData.h"
-#include ".\UI\UiWindow.h"
-#include ".\Combat Meter\CombatMeter.h"
-#include ".\Combat Meter\Combat.h"
+#include "FlatBuffers/include/SW_HISTORY_.h"
+#include "Damage Meter/History.h"
+#include "Damage Meter/MySQLite.h"
+#include "Damage Meter/SaveData.h"
+#include "UI/UiWindow.h"
+#include "Combat Meter/CombatMeter.h"
+#include "Combat Meter/Combat.h"
 
 
 using namespace SoulMeterFBS::History;

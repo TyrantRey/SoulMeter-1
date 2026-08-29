@@ -4,8 +4,8 @@
 #define PLOTWINDOW PlotWindow::getInstance()
 #include <vector>
 #include <unordered_map>
-#include ".\FlatBuffers\include\SW_PLOTINFO_.h"
-#include ".\Damage Meter\FlatBufferUtil.h"
+#include "FlatBuffers/include/SW_PLOTINFO_.h"
+#include "Damage Meter/FlatBufferUtil.h"
 
 
 using namespace SoulMeterFBS::History;

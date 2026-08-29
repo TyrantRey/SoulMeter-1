@@ -4,8 +4,8 @@
 #include "SkillTimeline.h"
 #include <vector>
 
-#include ".\Damage Meter\MySQLite.h"
-#include ".\Damage Meter\Damage Meter.h"
+#include "Damage Meter/MySQLite.h"
+#include "Damage Meter/Damage Meter.h"
 
 void PlotWindow::AddData(uint32_t id, std::string name, double DPS, double time, bool isFirstElement)
 {

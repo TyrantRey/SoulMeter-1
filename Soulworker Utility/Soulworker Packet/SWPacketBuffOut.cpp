@@ -1,8 +1,8 @@
 #include "pch.h"
-#include ".\Soulworker Packet\SWPacketBuffOut.h"
-#include ".\Buff Meter\Buff Meter.h"
-#include ".\Damage Meter\Damage Meter.h"
-#include ".\Combat Meter\CombatMeter.h"
+#include "Soulworker Packet/SWPacketBuffOut.h"
+#include "Buff Meter/Buff Meter.h"
+#include "Damage Meter/Damage Meter.h"
+#include "Combat Meter/CombatMeter.h"
 
 SWPacketBuffOut::SWPacketBuffOut(SWHEADER* swheader, BYTE* data) : SWPacket(swheader, data) {
 

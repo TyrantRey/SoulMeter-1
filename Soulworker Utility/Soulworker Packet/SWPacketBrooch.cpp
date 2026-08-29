@@ -1,7 +1,7 @@
 #include "pch.h"
-#include ".\Soulworker Packet\SWPacketBrooch.h"
-#include ".\Buff Meter\Buff Meter.h"
-#include ".\Damage Meter\Damage Meter.h"
+#include "Soulworker Packet/SWPacketBrooch.h"
+#include "Buff Meter/Buff Meter.h"
+#include "Damage Meter/Damage Meter.h"
 
 SWPacketBrooches::SWPacketBrooches(SWHEADER* swheader, BYTE* data) : SWPacket(swheader, data) {
 

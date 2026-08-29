@@ -1,15 +1,15 @@
 #include "pch.h"
 
-#include ".\UI\DX11.h"
-#include ".\UI\DX Input.h"
-#include ".\UI\UiWindow.h"
-#include ".\UI\PlayerTable.h"
-#include ".\UI\Option.h"
-#include ".\UI\HotKey.h"
-#include ".\UI\UtillWindow.h"
-#include ".\UI\PlotWindow.h"
-#include ".\Damage Meter\Damage Meter.h"
-#include ".\resource.h"
+#include "UI/DX11.h"
+#include "UI/DX Input.h"
+#include "UI/UiWindow.h"
+#include "UI/PlayerTable.h"
+#include "UI/Option.h"
+#include "UI/HotKey.h"
+#include "UI/UtillWindow.h"
+#include "UI/PlotWindow.h"
+#include "Damage Meter/Damage Meter.h"
+#include "resource.h"
 #include <io.h>
 #include <chrono>
 #include <thread>

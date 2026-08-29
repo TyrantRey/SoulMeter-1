@@ -1,5 +1,5 @@
 #include "pch.h"
-#include ".\Damage Meter\SWDamageSkill.h"
+#include "Damage Meter/SWDamageSkill.h"
 
 SWDamageSkill::SWDamageSkill(uint32_t id, uint64_t damage, uint64_t critDamage, unsigned short hitCount, unsigned short critHitCount){
 	_id = id;

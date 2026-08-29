@@ -1,8 +1,8 @@
 #pragma once
 #include "pch.h"
-#include ".\Combat Meter\Combat.h"
-#include ".\FlatBuffers\include\SW_HISTORY_.h"
-#include ".\Soulworker Packet\PacketInfo.h"
+#include "Combat Meter/Combat.h"
+#include "FlatBuffers/include/SW_HISTORY_.h"
+#include "Soulworker Packet/PacketInfo.h"
 
 using namespace SoulMeterFBS::History;
 

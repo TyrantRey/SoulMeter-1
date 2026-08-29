@@ -104,3 +104,54 @@ jobs:
             gh release create $tag $env:ZIP --title "SoulMeter $env:VERSION" --generate-notes --target $env:GITHUB_SHA
           }
           if ($LASTEXITCODE -ne 0) { throw "gh release failed" }
+
+  # Cross-compiles the same Windows binaries from Linux with llvm-mingw (README:
+  # "Building on Linux"). A build check plus a second, downloadable package -
+  # releases are still cut from the MSVC build above.
+  linux:
+    runs-on: ubuntu-latest
+    env:
+      LLVM_MINGW_VERSION: '20260826'
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Fetch font
+        if: vars.SOULMETER_FONT_URL != ''
+        run: |
+          mkdir -p "Soulworker Utility/Font"
+          curl -sSL -o "Soulworker Utility/Font/NotoSansAll-Bold.ttf" "${{ vars.SOULMETER_FONT_URL }}"
+          ls -l "Soulworker Utility/Font"
+
+      - name: Install llvm-mingw and Ninja
+        run: |
+          set -euo pipefail
+          name="llvm-mingw-${LLVM_MINGW_VERSION}-ucrt-ubuntu-22.04-x86_64"
+          curl -sSL -o "$RUNNER_TEMP/$name.tar.xz" \
+            "https://github.com/mstorsjo/llvm-mingw/releases/download/${LLVM_MINGW_VERSION}/$name.tar.xz"
+          tar xf "$RUNNER_TEMP/$name.tar.xz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/$name/bin" >> "$GITHUB_PATH"
+          sudo apt-get install -y --no-install-recommends ninja-build
+
+      - name: Configure
+        run: >
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_TOOLCHAIN_FILE=cmake/toolchain-llvm-mingw.cmake
+
+      - name: Build and package
+        run: cmake --build build --target dist
+
+      - name: Name package
+        id: package
+        run: |
+          zip=$(ls build/SoulMeter-*.zip)
+          echo "name=$(basename "$zip" .zip)-mingw" >> "$GITHUB_OUTPUT"
+          echo "zip=$zip" >> "$GITHUB_OUTPUT"
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.name }}
+          path: ${{ steps.package.outputs.zip }}
+          if-no-files-found: error

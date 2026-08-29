@@ -1,6 +1,6 @@
 #pragma once
-#include ".\Damage Meter\SWDamageSkill.h"
-#include ".\Third Party\FlatBuffers\include\SW_HISTORY_.h"
+#include "Damage Meter/SWDamageSkill.h"
+#include "Third Party/FlatBuffers/include/SW_HISTORY_.h"
 
 using namespace SoulMeterFBS::History;
 

@@ -1,6 +1,6 @@
 #include "pch.h"
-#include ".\Soulworker Packet\Injector.h"
-#include ".\Util\Log.h"
+#include "Soulworker Packet/Injector.h"
+#include "Util/Log.h"
 #include <tlhelp32.h>
 #include <psapi.h>
 #include <map>

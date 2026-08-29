@@ -1,8 +1,8 @@
 #include "pch.h"
-#include ".\Soulworker Packet\SWPacket.h"
-#include ".\Damage Meter\Damage Meter.h"
-#include ".\Soulworker Packet\SWPacketEnterAnimation.h"
-#include ".\Combat Meter\CombatMeter.h"
+#include "Soulworker Packet/SWPacket.h"
+#include "Damage Meter/Damage Meter.h"
+#include "Soulworker Packet/SWPacketEnterAnimation.h"
+#include "Combat Meter/CombatMeter.h"
 
 SWPacketEnterAnimation::SWPacketEnterAnimation(SWHEADER* swheader, BYTE* data) : SWPacket(swheader, data) {
 

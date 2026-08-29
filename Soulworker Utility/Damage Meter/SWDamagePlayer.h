@@ -1,10 +1,10 @@
 #pragma once
-#include ".\Damage Meter\SWDamageMonster.h"
-#include ".\Soulworker Packet\PacketInfo.h"
-#include ".\Damage Meter\MonsterList.h"
+#include "Damage Meter/SWDamageMonster.h"
+#include "Soulworker Packet/PacketInfo.h"
+#include "Damage Meter/MonsterList.h"
 #include <unordered_set>
 #include <map>
-#include ".\Third Party\FlatBuffers\include\SW_HISTORY_.h"
+#include "Third Party/FlatBuffers/include/SW_HISTORY_.h"
 
 using namespace SoulMeterFBS::History;
 

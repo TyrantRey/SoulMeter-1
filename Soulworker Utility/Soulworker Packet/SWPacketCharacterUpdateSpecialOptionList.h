@@ -1,6 +1,6 @@
 #pragma once
 #include "pch.h"
-#include ".\Soulworker Packet\SWPacket.h"
+#include "Soulworker Packet/SWPacket.h"
 
 #pragma pack(push, 1)
 typedef struct _SWPacketcharacterUpdateSpecialOptionListHeader {

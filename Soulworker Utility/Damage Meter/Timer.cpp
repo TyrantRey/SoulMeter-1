@@ -1,5 +1,5 @@
 #include "pch.h"
-#include ".\Damage Meter\Timer.h"
+#include "Damage Meter/Timer.h"
 
 Timer::Timer() {
 	_status = TIMER_STATUS::end;

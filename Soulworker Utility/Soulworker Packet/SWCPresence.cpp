@@ -1,6 +1,6 @@
 #include "pch.h"
-#include ".\Soulworker Packet\SWCPresence.h"
-#include ".\Damage Meter\Damage Meter.h"
+#include "Soulworker Packet/SWCPresence.h"
+#include "Damage Meter/Damage Meter.h"
 SWCPresence::SWCPresence(SWHEADER* swheader, uint8_t* data) {
 	_swheader = swheader;
 	_data = data;

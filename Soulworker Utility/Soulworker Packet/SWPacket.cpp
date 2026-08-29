@@ -1,5 +1,5 @@
 #include "pch.h"
-#include ".\Soulworker Packet\SWPacket.h"
+#include "Soulworker Packet/SWPacket.h"
 
 SWPacket::SWPacket(SWHEADER* swheader, uint8_t* data) {
 	_swheader = swheader;

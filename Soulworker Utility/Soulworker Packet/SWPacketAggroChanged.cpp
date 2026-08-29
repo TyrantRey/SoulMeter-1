@@ -1,6 +1,6 @@
 #include "pch.h"
-#include ".\Soulworker Packet\SWPacketAggroChanged.h"
-#include ".\Damage Meter\Damage Meter.h"
+#include "Soulworker Packet/SWPacketAggroChanged.h"
+#include "Damage Meter/Damage Meter.h"
 
 SWPacketAggroChanged::SWPacketAggroChanged(SWHEADER* swheader, BYTE* data) : SWPacket(swheader, data) {
 

@@ -1,6 +1,6 @@
 #include "pch.h"
-#include ".\Soulworker Packet\SWSPacketMyDodgeUsed.h"
-#include ".\Damage Meter\Damage Meter.h"
+#include "Soulworker Packet/SWSPacketMyDodgeUsed.h"
+#include "Damage Meter/Damage Meter.h"
 
 SWSPacketMyDodgeUsed::SWSPacketMyDodgeUsed(SWHEADER* swheader, BYTE* data) {
 	_swheader = swheader;

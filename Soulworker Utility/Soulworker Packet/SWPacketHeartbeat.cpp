@@ -1,6 +1,6 @@
 #include "pch.h"
-#include ".\Soulworker Packet\SWPacketHeartbeat.h"
-#include ".\UI\PlayerTable.h"
+#include "Soulworker Packet/SWPacketHeartbeat.h"
+#include "UI/PlayerTable.h"
 
 SWPacketHeartbeat::SWPacketHeartbeat(SWHEADER* swheader, BYTE* data, uint64_t ts) : SWPacket(swheader, data), _ts(ts) {
 }

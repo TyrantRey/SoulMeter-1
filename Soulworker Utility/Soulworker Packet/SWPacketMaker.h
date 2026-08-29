@@ -1,7 +1,7 @@
 #pragma once
 
-#include ".\Soulworker Packet\PacketType.h"
-#include ".\Soulworker Packet\SWPacket.h"
+#include "Soulworker Packet/PacketType.h"
+#include "Soulworker Packet/SWPacket.h"
 
 #define SWPACKETMAKER SWPacketMaker::getInstance()
 

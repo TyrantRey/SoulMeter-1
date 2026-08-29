@@ -1,9 +1,9 @@
 #include "pch.h"
-#include ".\Soulworker Packet\SWPacketcharacterUpdateSpecialOptionList.h"
-#include ".\Buff Meter\Buff Meter.h"
-#include ".\Damage Meter\Damage Meter.h"
-#include ".\UI\PlotWindow.h"
-#include ".\Combat Meter\CombatMeter.h"
+#include "Soulworker Packet/SWPacketCharacterUpdateSpecialOptionList.h"
+#include "Buff Meter/Buff Meter.h"
+#include "Damage Meter/Damage Meter.h"
+#include "UI/PlotWindow.h"
+#include "Combat Meter/CombatMeter.h"
 
 SWPacketcharacterUpdateSpecialOptionList::SWPacketcharacterUpdateSpecialOptionList(SWHEADER* swheader, BYTE* data) : SWPacket(swheader, data) {
 

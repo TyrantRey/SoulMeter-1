@@ -1,6 +1,6 @@
 #include "pch.h"
-#include ".\Buff Meter\Buff.h"
-#include ".\Damage Meter\MySQLite.h"
+#include "Buff Meter/Buff.h"
+#include "Damage Meter/MySQLite.h"
 
 Buff::Buff(unsigned short buffID, BYTE stack) : _buffID(buffID), _stack(stack) {
 	_timePoint = std::chrono::system_clock::now();

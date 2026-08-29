@@ -1,6 +1,6 @@
 #include "pch.h"
-#include ".\Soulworker Packet\SWPacketMazeEnd.h"
-#include ".\Damage Meter\Damage Meter.h"
+#include "Soulworker Packet/SWPacketMazeEnd.h"
+#include "Damage Meter/Damage Meter.h"
 
 SWPacketMazeEnd::SWPacketMazeEnd(SWHEADER* swheader, BYTE* data) : SWPacket(swheader, data) {
 

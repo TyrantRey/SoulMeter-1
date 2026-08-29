@@ -1,10 +1,10 @@
 #pragma once
-#include ".\Damage Meter\SWDamagePlayer.h"
-#include ".\Buff Meter\Buff Meter.h"
-#include ".\UI\PlotWindow.h"
-#include ".\Damage Meter\Damage Meter.h"
-#include ".\Third Party\FlatBuffers\include\SW_HISTORY_.h"
-#include ".\Combat Meter\Combat.h"
+#include "Damage Meter/SWDamagePlayer.h"
+#include "Buff Meter/Buff Meter.h"
+#include "UI/PlotWindow.h"
+#include "Damage Meter/Damage Meter.h"
+#include "Third Party/FlatBuffers/include/SW_HISTORY_.h"
+#include "Combat Meter/Combat.h"
 
 using namespace SoulMeterFBS::History;
 

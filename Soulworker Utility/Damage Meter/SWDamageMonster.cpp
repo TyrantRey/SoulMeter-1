@@ -1,7 +1,7 @@
 #include "pch.h"
-#include ".\Damage Meter\SWDamageSkill.h"
-#include ".\Damage Meter\SWDamageMonster.h"
-#include ".\Damage Meter\MySQLite.h"
+#include "Damage Meter/SWDamageSkill.h"
+#include "Damage Meter/SWDamageMonster.h"
+#include "Damage Meter/MySQLite.h"
 
 #define DEBUG_DAMAGE_MONSTER 0
 

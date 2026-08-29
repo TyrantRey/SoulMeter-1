@@ -1,7 +1,7 @@
 #include "pch.h"
-#include ".\Soulworker Packet\SWSPacketMySkillUsed.h"
-#include ".\Damage Meter\Damage Meter.h"
-#include ".\Combat Meter\CombatMeter.h"
+#include "Soulworker Packet/SWSPacketMySkillUsed.h"
+#include "Damage Meter/Damage Meter.h"
+#include "Combat Meter/CombatMeter.h"
 
 SWSPacketMySkillUsed::SWSPacketMySkillUsed(SWHEADER* swheader, BYTE* data) {
 	_swheader = swheader;

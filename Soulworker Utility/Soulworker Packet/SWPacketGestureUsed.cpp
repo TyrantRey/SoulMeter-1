@@ -1,5 +1,5 @@
 #include "pch.h"
-#include ".\Soulworker Packet\SWPacketGestureUsed.h"
+#include "Soulworker Packet/SWPacketGestureUsed.h"
 
 
 SWPacketGestureUsed::SWPacketGestureUsed(SWHEADER* swheader, BYTE* data) : SWPacket(swheader, data) {
