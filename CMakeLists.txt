@@ -50,6 +50,7 @@ endif()
 # ---------------------------------------------------------------------------
 add_library(SoulMeterHook SHARED
   "${HOOK_DIR}/blockcache.cpp"
+  "${HOOK_DIR}/clipsync.cpp"
   "${HOOK_DIR}/dllmain.cpp"
   "${HOOK_DIR}/gamecmd.cpp"
   "${HOOK_DIR}/loadopt.cpp"

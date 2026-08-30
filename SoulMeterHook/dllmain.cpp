@@ -8,6 +8,7 @@
 #include <cstdint>
 
 #include "blockcache.h"
+#include "clipsync.h"
 #include "gamecmd.h"
 #include "loadopt.h"
 #include "md5cache.h"
@@ -177,6 +178,8 @@ DWORD WINAPI SetupThread(LPVOID) {
     HookUninstall();
     Md5CacheShutdown();
     BlockCacheShutdown();
+    // Before the subclass is unwound: the watcher calls back into gamecmd.
+    ClipSyncShutdown();
     GameCmdShutdown();
     return 0;
 }

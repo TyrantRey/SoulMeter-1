@@ -9,6 +9,7 @@
 #include "Buff Meter/Buff Meter.h"
 #include "Damage Meter/MySQLite.h"
 #include "SWConfig.h"
+#include "Soulworker Packet/HookCommand.h"
 #include <shellapi.h>
 #pragma comment(lib, "shell32.lib")
 
@@ -46,7 +47,7 @@ void SetFont()
 UiOption::UiOption()  : 
 	_open(0), _framerate(1), _windowBorderSize(1), _fontScale(1), _columnFontScale(1), _tableFontScale(1), 
 	_is1K(0), _is1M(0), _is10K(0), _isSoloMode(0), _hideName(0), _isTopMost(true), _teamTA_LF(false), _isSoloRankMode(FALSE), _isUseSaveData(FALSE),
-	_isDontSaveUnfinishedMaze(false),
+	_isDontSaveUnfinishedMaze(false), _isClipboardPaste(TRUE),
 	_cellPadding(0, 0), _windowWidth(800), _refreshTime((float)0.3), _oriIsUseSaveData(FALSE), _selectedFontFile("NotoSansAll-Bold.ttf")
 {
 	
@@ -424,6 +425,8 @@ void UiOption::ShowFeatures()
 	ImGui::Checkbox(LANGMANAGER.GetText("STR_OPTION_SOLO_RANK_MODE").data(), (bool*)&_isSoloRankMode); ImGui::SameLine(); ImGui::Checkbox(LANGMANAGER.GetText("STR_OPTION_DONT_SAVE_UNFINISHED_MAZE").data(), (bool*)&_isDontSaveUnfinishedMaze);
 	ImGui::Checkbox(LANGMANAGER.GetText("STR_OPTION_USE_SAVEDATA").data(), (bool*)&_isUseSaveData);
 	ImGui::Checkbox(LANGMANAGER.GetText("STR_OPTION_USE_IMAGE").data(), (bool*)&_isUseImage);
+	if (ImGui::Checkbox(LANGMANAGER.GetText("STR_OPTION_CLIPBOARD_PASTE").data(), (bool*)&_isClipboardPaste))
+		HookCommandSetClipboardPaste(_isClipboardPaste != FALSE);
 	
 	
 }
@@ -530,6 +533,11 @@ void UiOption::Init() {
 	if (!GetOption()) {
 		SetBasicOption();
 	}
+
+	// The command channel starts after this and restates the value on every
+	// connect, so a hook that attaches later still gets the right state.
+	HookCommandSetClipboardPaste(_isClipboardPaste != FALSE);
+
 	_inited = true;
 }
 
@@ -681,6 +689,10 @@ bool UiOption::GetOption() {
 	attr = ele->FindAttribute("IsDontSaveUnfinishedMaze");
 	if (attr != nullptr)
 		attr->QueryIntValue(&_isDontSaveUnfinishedMaze);
+
+	attr = ele->FindAttribute("IsClipboardPaste");
+	if (attr != nullptr)
+		attr->QueryIntValue(&_isClipboardPaste);
 
 #if DEBUG_READ_XML == 1
 	LogInstance.WriteLog("Read 1M = %d", _is1M);
@@ -1075,6 +1087,7 @@ bool UiOption::SaveOption(bool skipWarning) {
 	option->SetAttribute("UseFontFile", _selectedFontFile);
 
 	option->SetAttribute("IsDontSaveUnfinishedMaze", _isDontSaveUnfinishedMaze);
+	option->SetAttribute("IsClipboardPaste", _isClipboardPaste);
 
 	RECT rect;
 	GetWindowRect(UIWINDOW.GetHWND(), &rect);

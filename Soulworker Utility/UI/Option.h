@@ -48,6 +48,7 @@ private:
 	BOOL _oriIsUseSaveData;
 	char _selectedFontFile[MAX_PATH] = { 0 };
 	BOOL _isDontSaveUnfinishedMaze;
+	BOOL _isClipboardPaste;
 
 	bool ShowTableOption();
 	bool ShowHotkeySetting();

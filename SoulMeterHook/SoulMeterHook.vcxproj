@@ -152,6 +152,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="blockcache.cpp" />
+    <ClCompile Include="clipsync.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="gamecmd.cpp" />
     <ClCompile Include="loadopt.cpp" />
@@ -169,6 +170,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="blockcache.h" />
+    <ClInclude Include="clipsync.h" />
     <ClInclude Include="gamecmd.h" />
     <ClInclude Include="loadopt.h" />
     <ClInclude Include="md5cache.h" />

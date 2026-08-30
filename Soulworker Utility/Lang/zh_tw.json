@@ -128,6 +128,7 @@
     "STR_OPTION_SELECT_INTERFACE": "擷取的網路卡",
     "STR_OPTION_ALL": "全部",
     "STR_OPTION_DONT_SAVE_UNFINISHED_MAZE": "不保存未完成的副本",
+    "STR_OPTION_CLIPBOARD_PASTE": "在遊戲內貼上 Windows 剪貼簿內容 (Ctrl+V)",
     "STR_OPTION_CHECK_UPDATE": "檢查更新",
 
     "STR_CHAR_UNKNOWN": "未知玩家",
