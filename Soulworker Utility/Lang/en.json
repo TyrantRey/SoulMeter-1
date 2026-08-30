@@ -129,6 +129,7 @@
     "STR_OPTION_SELECT_INTERFACE": "Use network interface",
     "STR_OPTION_ALL": "All",
     "STR_OPTION_DONT_SAVE_UNFINISHED_MAZE": "Don't save unfinished maze",
+    "STR_OPTION_CLIPBOARD_PASTE": "Paste Windows clipboard in game (Ctrl+V)",
     "STR_OPTION_CHECK_UPDATE": "Check for updates",
 
     "STR_CHAR_UNKNOWN": "Unknown",

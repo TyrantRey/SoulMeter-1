@@ -9,6 +9,10 @@
 // The senders run on the message-pump thread only. The exit path clears state on
 // CMyPlayer and pokes the scene manager with no lock, so the window is
 // subclassed and commands arrive as a posted message.
+//
+// That subclass is now shared: anything else that has to run on the game's own
+// thread arrives the same way, which is why arming the window is independent of
+// whether the maze senders resolved.
 
 #include "gamecmd.h"
 
@@ -16,6 +20,7 @@
 #include <cstdarg>
 #include <cstdio>
 
+#include "clipsync.h"
 #include "peutil.h"
 
 namespace {
@@ -48,7 +53,9 @@ void* volatile g_netMgr = nullptr;
 HWND g_hwnd = nullptr;
 WNDPROC g_oWndProc = nullptr;
 bool g_wndUnicode = true;
+volatile LONG g_arming = 0;
 
+// Indexed by op, and only ops 1 and 2 are debounced.
 uint32_t g_lastFireMs[3] = { 0, 0, 0 };
 
 struct RtFn {
@@ -247,6 +254,19 @@ BOOL CALLBACK PickWindow(HWND hwnd, LPARAM param) {
 }
 
 void RunCommand(uint8_t op, uint32_t arg) {
+    if (op == SMH_CMD_CLIP_APPLY) {
+        ClipSyncApplyOnGameThread();
+        return;
+    }
+
+    // The senders resolve independently of the window now, so they can be
+    // missing on a build where everything else still works.
+    if ((op == SMH_CMD_RESTART_MAZE && !g_fnRestart) ||
+        (op == SMH_CMD_EXIT_MAZE && !g_fnExitMaze)) {
+        Log("command %u ignored: sender not resolved", op);
+        return;
+    }
+
     void* netMgr = g_netMgr;
     if (!netMgr) {
         Log("command %u ignored: no netMgr seen yet", op);
@@ -275,6 +295,11 @@ LRESULT CALLBACK HookWndProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
         RunCommand((uint8_t)w, (uint32_t)l);
         return 0;
     }
+    // Coming back from another application is when the Windows clipboard is
+    // most likely to have moved, and activation is the one message the game
+    // cannot route past us. Falls through: this is not our message.
+    if ((msg == WM_ACTIVATEAPP && w) || msg == WM_SETFOCUS)
+        ClipSyncOnForeground();
     if (g_wndUnicode)
         return CallWindowProcW(g_oWndProc, hwnd, msg, w, l);
     return CallWindowProcA(g_oWndProc, hwnd, msg, w, l);
@@ -298,35 +323,51 @@ bool SubclassGameWindow() {
 
     char title[128] = { 0 };
     GetWindowTextA(s.best, title, sizeof(title) - 1);
-    Log("maze commands armed on window %p (%s)", (void*)s.best, title);
+    Log("armed on window %p (%s)", (void*)s.best, title);
     return true;
+}
+
+// Both the command thread and the clipboard watcher call this, so the pick is
+// serialised - two threads must not subclass the same window at once.
+bool ArmWindow() {
+    if (InterlockedCompareExchange(&g_arming, 1, 0) != 0)
+        return g_hwnd != nullptr;
+
+    // A recreated window - a fullscreen or borderless toggle does it - leaves a
+    // stale subclass target behind.
+    if (g_hwnd && !IsWindow(g_hwnd)) {
+        g_hwnd = nullptr;
+        g_oWndProc = nullptr;
+    }
+    // Gated on the module rather than on the senders: the real window comes up
+    // after SoulWorker64.dll is mapped, and picking before that can latch a
+    // launcher window that is then destroyed.
+    if (!g_hwnd && GetModuleHandleW(kModuleName))
+        SubclassGameWindow();
+
+    InterlockedExchange(&g_arming, 0);
+    return g_hwnd != nullptr;
 }
 
 } // namespace
 
 bool GameCmdInit() {
-    // A recreated window leaves a stale subclass target behind.
-    if (g_hwnd && !IsWindow(g_hwnd)) {
-        g_hwnd = nullptr;
-        g_oWndProc = nullptr;
-    }
-    if (g_hwnd)
-        return true;
+    bool armed = ArmWindow();
 
-    if (!g_fnRestart) {
-        if (g_resolveFailed)
-            return false;
-        if (!ResolveSenders()) {
-            // Scanning the image is only worth repeating while the module has
-            // yet to load; a failure after that will not fix itself.
-            if (GetModuleHandleW(kModuleName)) {
-                g_resolveFailed = true;
-                Log("maze commands disabled: senders did not resolve in this build");
-            }
-            return false;
+    if (!g_fnRestart && !g_resolveFailed && !ResolveSenders()) {
+        // Scanning the image is only worth repeating while the module has yet
+        // to load; a failure after that will not fix itself. It no longer costs
+        // the window either - the maze commands go quiet on their own.
+        if (GetModuleHandleW(kModuleName)) {
+            g_resolveFailed = true;
+            Log("maze commands disabled: senders did not resolve in this build");
         }
     }
-    return SubclassGameWindow();
+    return armed;
+}
+
+bool GameCmdEnsureArmed() {
+    return ArmWindow();
 }
 
 void GameCmdShutdown() {
@@ -353,6 +394,12 @@ void GameCmdSetNetMgr(void* netMgr) {
 }
 
 void GameCmdPost(uint8_t op, uint32_t arg) {
+    if (op == SMH_CMD_CLIPBOARD_PASTE) {
+        // State, not an action: never debounced, so a fast toggle cannot leave
+        // the hook out of sync, and accepted before there is a window.
+        ClipSyncSetEnabled(arg != 0);
+        return;
+    }
     if (op != SMH_CMD_RESTART_MAZE && op != SMH_CMD_EXIT_MAZE)
         return;
     if (!g_hwnd) {
@@ -366,4 +413,10 @@ void GameCmdPost(uint8_t op, uint32_t arg) {
     g_lastFireMs[op] = now;
 
     PostMessageW(g_hwnd, WM_SMH_CMD, op, arg);
+}
+
+bool GameCmdPostLocal(uint8_t op, uint32_t arg) {
+    if (!g_hwnd)
+        return false;
+    return PostMessageW(g_hwnd, WM_SMH_CMD, op, arg) != FALSE;
 }

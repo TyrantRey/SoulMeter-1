@@ -34,6 +34,7 @@ SoulMeter reads the game's network traffic and turns it into a live picture of y
 | **Ping** | Live latency, measured from the game's own heartbeat exchange |
 | **Faster loading** | Cuts cold game startup from ~95s to ~38s — see [Load-time optimisations](#load-time-optimisations) |
 | **Maze hotkeys** | Restart or leave a maze from a key of your choice |
+| **Chat paste** | Paste text copied anywhere in Windows into the game's chat box, with the game's own `Ctrl` + `V` |
 | **Localised** | English, 日本語, 한국어, 繁體中文 |
 
 ---
@@ -73,6 +74,7 @@ Rebind them under **Options → Hotkey**: click a binding, press up to three key
 - **Left-click a character's row** to open their detailed breakdown.
 - In the skill timeline, `Ctrl` + wheel zooms the time axis, dragging pans it, and a double-click (or **Fit**) shows the whole run again.
 - Non-Latin text not rendering? Drop a font covering your language into `Font/` and pick it in the Font Selector.
+- **Pasting into chat** works with the game's own `Ctrl` + `V` — SoulMeter keeps the game's internal clipboard in step with the Windows one, which is the part the client itself never did. Line breaks become spaces and a paste is capped at 512 characters. It is on by default; untick it under **Options → Features** to keep your Windows clipboard out of the game.
 - User settings live in `option.xml` and `imgui.ini`; saved history in `SoulMeter.dat`.
 
 ---

@@ -28,6 +28,7 @@ CRITICAL_SECTION g_cs;
 bool g_csReady = false;
 HANDLE g_wake = nullptr;
 volatile LONG g_connected = 0;
+volatile LONG g_clipboardPaste = 0;
 
 Command g_queue[kQueueSize];
 int g_qHead = 0;
@@ -103,7 +104,12 @@ DWORD WINAPI CommandServerThread(LPVOID) {
         LogInstance.WriteLog("Hook command channel connected");
 
         ULONGLONG lastKeepAlive = GetTickCount64();
-        bool broken = false;
+
+        // The hook cannot ask, and the meter usually outlives several game -
+        // and therefore several hook - lifetimes. Written straight to the pipe
+        // so it lands ahead of anything the UI queues in the same instant.
+        bool broken = !WriteCommand(hPipe, HOOK_CMD_CLIPBOARD_PASTE,
+                                    InterlockedCompareExchange(&g_clipboardPaste, 0, 0));
 
         while (g_running && !broken) {
             WaitForSingleObject(g_wake, 250);
@@ -185,4 +191,12 @@ void HookCommandExitMaze() {
 
     if (!HookCommandSend(HOOK_CMD_EXIT_MAZE, 0))
         LogInstance.WriteLog("Exit maze hotkey: hook not connected");
+}
+
+// Kept here rather than read from UIOPTION on the pipe thread, so the wiring
+// does not depend on the order the two subsystems start in. A send that finds
+// no hook is fine: the connect path restates it.
+void HookCommandSetClipboardPaste(bool enabled) {
+    InterlockedExchange(&g_clipboardPaste, enabled ? 1 : 0);
+    HookCommandSend(HOOK_CMD_CLIPBOARD_PASTE, enabled ? 1 : 0);
 }

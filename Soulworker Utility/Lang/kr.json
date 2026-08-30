@@ -128,6 +128,7 @@
     "STR_OPTION_SELECT_INTERFACE": "사용한 네트워크 인터페이스",
     "STR_OPTION_ALL": "전체",
     "STR_OPTION_DONT_SAVE_UNFINISHED_MAZE": "클리어하지 않은 메이즈 저장 X",
+    "STR_OPTION_CLIPBOARD_PASTE": "게임 안에서 Windows 클립보드 붙여넣기 (Ctrl+V)",
     "STR_OPTION_CHECK_UPDATE": "업데이트 자동 체크",
 
     "STR_CHAR_UNKNOWN": "Unknown",
